@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "esModuleInterop": true,
+    "incremental": false,
+    "baseUrl": ".",
+    "outDir": "./dist"
+  },
+  "include": ["src", "src/**/*.spec.ts", "src/**/*.test.ts"],
+  "exclude": ["node_modules", "test", "dist"]
+}
