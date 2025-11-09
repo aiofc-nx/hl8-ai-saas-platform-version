@@ -23,7 +23,9 @@ describe("Sanitizer", () => {
         name: "John",
       };
 
-      const result = sanitizer.sanitize(context, { enabled: true });
+      const result = sanitizer.sanitize(context, {
+        enabled: true,
+      }) as typeof context;
 
       expect(result.password).toBe("***");
       expect(result.token).toBe("***");
@@ -50,7 +52,7 @@ describe("Sanitizer", () => {
       const result = sanitizer.sanitize(context, {
         enabled: true,
         placeholder: "[REDACTED]",
-      });
+      }) as typeof context;
 
       expect(result.password).toBe("[REDACTED]");
     });
@@ -65,7 +67,7 @@ describe("Sanitizer", () => {
       const result = sanitizer.sanitize(context, {
         enabled: true,
         sensitiveFields: ["customSecret"],
-      });
+      }) as typeof context;
 
       expect(result.password).toBe("secret123"); // 不在自定义列表中
       expect(result.customSecret).toBe("***");
@@ -83,7 +85,7 @@ describe("Sanitizer", () => {
       const result = sanitizer.sanitize(context, {
         enabled: true,
         sensitiveFields: [/password/i],
-      });
+      }) as typeof context;
 
       expect(result.password).toBe("***");
       expect(result.Password).toBe("***");
@@ -106,7 +108,7 @@ describe("Sanitizer", () => {
       const result = sanitizer.sanitize(context, {
         enabled: true,
         customSanitizer,
-      });
+      }) as typeof context;
 
       expect(result.password).toBe("******");
     });
@@ -120,7 +122,9 @@ describe("Sanitizer", () => {
         token: "abc123",
       };
 
-      const result = sanitizer.sanitize(context, { enabled: true });
+      const result = sanitizer.sanitize(context, {
+        enabled: true,
+      }) as typeof context;
 
       expect(result.user.name).toBe("John");
       expect(result.user.password).toBe("***");
@@ -135,7 +139,9 @@ describe("Sanitizer", () => {
         ],
       };
 
-      const result = sanitizer.sanitize(context, { enabled: true });
+      const result = sanitizer.sanitize(context, {
+        enabled: true,
+      }) as typeof context;
 
       expect(result.users[0].name).toBe("John");
       expect(result.users[0].password).toBe("***");
@@ -151,7 +157,9 @@ describe("Sanitizer", () => {
         ]),
       };
 
-      const result = sanitizer.sanitize(context, { enabled: true });
+      const result = sanitizer.sanitize(context, {
+        enabled: true,
+      }) as typeof context;
 
       expect(result.map).toBeInstanceOf(Map);
       expect(result.map.get("password")).toBe("***");
@@ -163,7 +171,9 @@ describe("Sanitizer", () => {
         set: new Set(["secret123", "public456"]),
       };
 
-      const result = sanitizer.sanitize(context, { enabled: true });
+      const result = sanitizer.sanitize(context, {
+        enabled: true,
+      }) as typeof context;
 
       expect(result.set).toBeInstanceOf(Set);
       // Set 中的值不会被脱敏（因为 Set 没有字段名）
@@ -177,7 +187,9 @@ describe("Sanitizer", () => {
       };
       context.nested.parent = context;
 
-      const result = sanitizer.sanitize(context, { enabled: true });
+      const result = sanitizer.sanitize(context, {
+        enabled: true,
+      }) as typeof context;
 
       expect(result.password).toBe("***");
       expect(result.nested).toBeDefined();
@@ -191,7 +203,9 @@ describe("Sanitizer", () => {
         [Symbol("test")]: "symbol-value",
       };
 
-      const result = sanitizer.sanitize(context, { enabled: true });
+      const result = sanitizer.sanitize(context, {
+        enabled: true,
+      }) as typeof context;
 
       expect(result.password).toBe("***");
       expect(result.fn).toBeUndefined(); // 函数被跳过
@@ -204,7 +218,9 @@ describe("Sanitizer", () => {
         createdAt: date,
       };
 
-      const result = sanitizer.sanitize(context, { enabled: true });
+      const result = sanitizer.sanitize(context, {
+        enabled: true,
+      }) as typeof context;
 
       expect(result.password).toBe("***");
       expect(result.createdAt).toBe(date);
@@ -218,7 +234,9 @@ describe("Sanitizer", () => {
         name: "John",
       };
 
-      const result = sanitizer.sanitize(context, { enabled: true });
+      const result = sanitizer.sanitize(context, {
+        enabled: true,
+      }) as typeof context;
 
       expect(result.password).toBeNull();
       expect(result.token).toBeUndefined();

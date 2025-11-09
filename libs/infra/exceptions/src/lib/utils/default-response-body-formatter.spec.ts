@@ -1,5 +1,5 @@
 import { BadRequestException, HttpStatus } from "@nestjs/common";
-import type { ArgumentsHost, HttpArgumentsHost } from "@nestjs/common";
+import type { ArgumentsHost } from "@nestjs/common";
 import { GeneralBadRequestException } from "../exceptions/general-bad-request.exception.js";
 import { responseBodyFormatter } from "./default-response-body-formatter.js";
 
@@ -7,22 +7,20 @@ const createArgumentsHostMock = (
   requestId: string,
   responseHeaders: Record<string, string> = {},
 ): ArgumentsHost => {
-  const httpContext: HttpArgumentsHost = {
+  const httpContext = {
     getRequest: () => ({ requestId }),
     getResponse: () => ({
-      header: (key: string, value: string) => (responseHeaders[key] = value),
+      header: (key: string, value: string) => {
+        responseHeaders[key] = value;
+      },
     }),
     getNext: () => undefined,
   };
 
   return {
-    switchToHttp: () => httpContext,
-    switchToRpc: () => undefined as never,
-    switchToWs: () => undefined as never,
-    getArgs: () => [],
-    getArgByIndex: () => undefined,
-    getType: () => "http",
-  } satisfies ArgumentsHost;
+    switchToHttp: () =>
+      httpContext as unknown as ReturnType<ArgumentsHost["switchToHttp"]>,
+  } as unknown as ArgumentsHost;
 };
 
 describe("responseBodyFormatter", () => {

@@ -9,8 +9,9 @@ describe("GeneralBadRequestException", () => {
     });
 
     expect(Array.isArray(exception.data)).toBe(true);
-    expect(exception.data).toHaveLength(1);
-    expect(exception.data?.[0]).toMatchObject({
+    const issues = Array.isArray(exception.data) ? exception.data : [];
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
       field: "email",
       message: "邮箱格式不正确",
       code: "INVALID_EMAIL",

@@ -23,7 +23,12 @@ import {
   jest,
 } from "@jest/globals";
 import { FileCacheProvider } from "./file-cache.provider.js";
-import { CacheStrategy, FileCacheOptions } from "../types/cache.types.js";
+import {
+  CacheEvent,
+  CacheEventListener,
+  CacheStrategy,
+  FileCacheOptions,
+} from "../types/cache.types.js";
 import { CACHE_EVENTS } from "../constants.js";
 import { ConfigRecord } from "../types/config.types.js";
 import * as fs from "fs";
@@ -34,6 +39,8 @@ describe("FileCacheProvider", () => {
   let provider: FileCacheProvider;
   let cacheDir: string;
   let options: FileCacheOptions;
+
+  const createListener = () => jest.fn<CacheEventListener>();
 
   beforeEach(async () => {
     cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "file-cache-test-"));
@@ -319,7 +326,7 @@ describe("FileCacheProvider", () => {
 
   describe("事件监听", () => {
     it("应该触发 set 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.SET, listener);
 
@@ -329,13 +336,13 @@ describe("FileCacheProvider", () => {
       await provider.set(key, value);
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.SET);
       expect(event?.key).toBe(key);
     });
 
     it("应该触发 get hit 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.HIT, listener);
 
@@ -346,25 +353,25 @@ describe("FileCacheProvider", () => {
       await provider.get(key);
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.HIT);
       expect(event?.key).toBe(key);
     });
 
     it("应该触发 get miss 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.MISS, listener);
 
       await provider.get("non-existent-key");
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.MISS);
     });
 
     it("应该触发 delete 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.DELETE, listener);
 
@@ -375,13 +382,13 @@ describe("FileCacheProvider", () => {
       await provider.delete(key);
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.DELETE);
       expect(event?.key).toBe(key);
     });
 
     it("应该触发 expire 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.EXPIRE, listener);
 
@@ -396,13 +403,13 @@ describe("FileCacheProvider", () => {
       await provider.get(key);
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.EXPIRE);
       expect(event?.key).toBe(key);
     });
 
     it("应该能够移除事件监听器", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.SET, listener);
       provider.off(CACHE_EVENTS.SET, listener);
@@ -416,8 +423,8 @@ describe("FileCacheProvider", () => {
     });
 
     it("应该支持多个监听器", async () => {
-      const listener1 = jest.fn();
-      const listener2 = jest.fn();
+      const listener1 = createListener();
+      const listener2 = createListener();
 
       provider.on(CACHE_EVENTS.SET, listener1);
       provider.on(CACHE_EVENTS.SET, listener2);

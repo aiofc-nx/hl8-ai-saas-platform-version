@@ -13,7 +13,12 @@ import {
   CacheNamespacePolicyConfig,
 } from "../config/cache-namespace-policy.config.js";
 import type Redlock from "redlock";
-import { ResourceLockedError } from "redlock";
+class MockResourceLockedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResourceLockedError";
+  }
+}
 import type { Redis } from "ioredis";
 import type { ModuleRef } from "@nestjs/core";
 import { CacheNotificationService } from "./cache-notification.service.js";
@@ -178,7 +183,7 @@ describe("CacheConsistencyService", () => {
   });
 
   it("should propagate lock contention as conflict", async () => {
-    redlockUsing.mockRejectedValueOnce(new ResourceLockedError("busy"));
+    redlockUsing.mockRejectedValueOnce(new MockResourceLockedError("busy"));
 
     await expect(
       service.invalidate({

@@ -6,20 +6,15 @@ import { ForbiddenExceptionFilter } from "./forbidden-exception.filter.js";
 const createArgumentsHost = (
   request: Record<string, unknown>,
   response: Record<string, unknown>,
-): ArgumentsHost => {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => request,
-      getResponse: () => response,
-      getNext: () => undefined,
-    }),
-    switchToRpc: () => undefined as never,
-    switchToWs: () => undefined as never,
-    getArgs: () => [],
-    getArgByIndex: () => undefined,
-    getType: () => "http",
-  } satisfies ArgumentsHost;
-};
+): ArgumentsHost =>
+  ({
+    switchToHttp: () =>
+      ({
+        getRequest: () => request,
+        getResponse: () => response,
+        getNext: () => undefined,
+      }) as unknown as ReturnType<ArgumentsHost["switchToHttp"]>,
+  }) as unknown as ArgumentsHost;
 
 describe("ForbiddenExceptionFilter", () => {
   it("应将异常转换为统一格式并记录告警", () => {
@@ -30,9 +25,14 @@ describe("ForbiddenExceptionFilter", () => {
 
     const logger = {
       warn: jest.fn(),
-    } as unknown as ConstructorParameters<typeof ForbiddenExceptionFilter>[1];
+    };
 
-    const filter = new ForbiddenExceptionFilter(httpAdapterHost, logger);
+    const filter = new ForbiddenExceptionFilter(
+      httpAdapterHost,
+      logger as unknown as ConstructorParameters<
+        typeof ForbiddenExceptionFilter
+      >[1],
+    );
     const exception = new ForbiddenException("禁止访问测试");
 
     const response = {};

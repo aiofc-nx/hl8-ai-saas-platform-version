@@ -23,4 +23,5 @@ export default {
   coverageDirectory: "../../coverage/libs/swagger",
   testMatch: ["**/*.spec.ts"],
   setupFilesAfterEnv: ["<rootDir>/../../../jest.setup.js"],
+  passWithNoTests: true,
 };

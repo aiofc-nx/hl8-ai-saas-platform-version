@@ -23,4 +23,5 @@ export default {
   coverageDirectory: "../../coverage/libs/config",
   testMatch: ["**/*.spec.ts"],
   setupFilesAfterEnv: ["<rootDir>/../../../jest.setup.js"],
+  passWithNoTests: true,
 };

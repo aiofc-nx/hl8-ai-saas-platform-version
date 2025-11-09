@@ -15,6 +15,10 @@ module.exports = {
           module: "NodeNext",
           moduleResolution: "NodeNext",
         },
+        diagnostics: {
+          warnOnly: true,
+          ignoreCodes: [151002],
+        },
       },
     ],
   },

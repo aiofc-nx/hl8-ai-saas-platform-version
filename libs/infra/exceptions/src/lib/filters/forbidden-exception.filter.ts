@@ -37,11 +37,10 @@ export class ForbiddenExceptionFilter implements ExceptionFilter {
     const httpContext = host.switchToHttp();
     const instance = resolveRequestId(httpContext);
 
-    const payload = exception.getResponse() as Record<string, unknown>;
-    const detail =
-      (typeof payload === "object" && (payload?.["message"] as string)) ??
-      exception.message ??
-      "当前账户没有执行该操作的权限";
+    const payload = exception.getResponse();
+    const detail = this.resolveMessage(payload, exception.message, {
+      fallback: "当前账户没有执行该操作的权限",
+    });
 
     const response: ErrorResponse = {
       type: "about:blank",
@@ -57,5 +56,51 @@ export class ForbiddenExceptionFilter implements ExceptionFilter {
     });
 
     httpAdapter.reply(httpContext.getResponse(), response, response.status);
+  }
+
+  /**
+   * @description 统一解析异常消息，确保返回字符串
+   * @param payload - 异常响应原始载荷
+   * @param defaultMessage - 异常对象上的默认消息
+   * @param options - 解析选项（包含兜底文案）
+   * @returns 标准化后的消息字符串
+   */
+  private resolveMessage(
+    payload: unknown,
+    defaultMessage?: string,
+    options?: { fallback?: string },
+  ): string {
+    const fallback = options?.fallback ?? "发生未知的权限错误";
+
+    if (typeof payload === "string" && payload.trim().length > 0) {
+      return payload;
+    }
+
+    if (
+      typeof payload === "object" &&
+      payload !== null &&
+      "message" in payload
+    ) {
+      const message = (payload as Record<string, unknown>).message;
+      if (Array.isArray(message)) {
+        return (
+          message
+            .filter((item): item is string => typeof item === "string")
+            .join("，") || fallback
+        );
+      }
+      if (typeof message === "string" && message.trim().length > 0) {
+        return message;
+      }
+    }
+
+    if (
+      typeof defaultMessage === "string" &&
+      defaultMessage.trim().length > 0
+    ) {
+      return defaultMessage;
+    }
+
+    return fallback;
   }
 }

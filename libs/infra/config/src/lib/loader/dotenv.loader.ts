@@ -51,7 +51,10 @@ export const dotenvLoader = (
     enableExpandVariables = true,
   } = options;
 
-  return (_previousConfig: ConfigRecord = {}): ConfigRecord => {
+  return (previousConfig: unknown = {}): ConfigRecord => {
+    // previousConfig 由配置模块用于合并不同加载器的结果，此处无需使用
+    void previousConfig;
+
     let config: ConfigRecord = {};
 
     // 智能加载策略：

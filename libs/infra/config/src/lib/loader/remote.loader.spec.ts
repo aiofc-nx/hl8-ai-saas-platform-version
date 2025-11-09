@@ -26,8 +26,8 @@ import { remoteLoader } from "./remote.loader.js";
 import { ConfigError } from "../errors/index.js";
 
 // Mock global fetch
-const mockFetch = jest.fn();
-global.fetch = mockFetch as unknown as typeof fetch;
+const mockFetch = jest.fn<typeof fetch>();
+global.fetch = mockFetch;
 
 describe("remoteLoader", () => {
   beforeEach(() => {
@@ -51,7 +51,7 @@ describe("remoteLoader", () => {
         }),
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config");
       const config = await loader();
@@ -78,7 +78,7 @@ describe("remoteLoader", () => {
         json: async () => ({ config: "value" }),
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         requestConfig: {
@@ -102,7 +102,7 @@ describe("remoteLoader", () => {
         json: async () => ({ config: "value" }),
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         requestConfig: {
@@ -133,7 +133,7 @@ describe("remoteLoader", () => {
         statusText: "Not Found",
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config");
 
@@ -162,7 +162,7 @@ describe("remoteLoader", () => {
         }),
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         type: "json",
@@ -182,7 +182,7 @@ describe("remoteLoader", () => {
         json: async () => ({ database: { host: "localhost" } }),
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         type: "json",
@@ -206,7 +206,7 @@ describe("remoteLoader", () => {
         }),
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       // mapResponse 接收的是 makeRequest 返回的对象 { data, status }
       // 其中 data 是 fetch.json() 的结果
@@ -226,7 +226,7 @@ describe("remoteLoader", () => {
         json: async () => ({ nested: { key: "value" } }),
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       // type 函数接收 mapResponse 后的数据，返回配置类型字符串
       const loader = remoteLoader("http://config-server/api/config", {
@@ -255,8 +255,8 @@ describe("remoteLoader", () => {
 
       // 第一次失败，第二次成功
       mockFetch
-        .mockResolvedValueOnce(mockErrorResponse as Response)
-        .mockResolvedValueOnce(mockSuccessResponse as Response);
+        .mockResolvedValueOnce(mockErrorResponse as unknown as Response)
+        .mockResolvedValueOnce(mockSuccessResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         retries: 1,
@@ -277,7 +277,7 @@ describe("remoteLoader", () => {
         statusText: "Internal Server Error",
       };
 
-      mockFetch.mockResolvedValue(mockErrorResponse as Response);
+      mockFetch.mockResolvedValue(mockErrorResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         retries: 2,
@@ -304,8 +304,8 @@ describe("remoteLoader", () => {
       };
 
       mockFetch
-        .mockResolvedValueOnce(mockErrorResponse as Response)
-        .mockResolvedValueOnce(mockSuccessResponse as Response);
+        .mockResolvedValueOnce(mockErrorResponse as unknown as Response)
+        .mockResolvedValueOnce(mockSuccessResponse as unknown as Response);
 
       const startTime = Date.now();
       const loader = remoteLoader("http://config-server/api/config", {
@@ -327,7 +327,7 @@ describe("remoteLoader", () => {
         json: async () => ({ config: "value" }),
       };
 
-      mockFetch.mockResolvedValue(mockResponse as Response);
+      mockFetch.mockResolvedValue(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         retries: 1,
@@ -352,7 +352,7 @@ describe("remoteLoader", () => {
         statusText: "Not Found",
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         retries: 0, // 不重试
@@ -380,7 +380,7 @@ describe("remoteLoader", () => {
         },
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         retries: 0,
@@ -413,7 +413,7 @@ describe("remoteLoader", () => {
         json: async () => ({}),
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config");
       const config = await loader();
@@ -429,7 +429,7 @@ describe("remoteLoader", () => {
         json: async () => ({ config: "value" }),
       };
 
-      mockFetch.mockResolvedValueOnce(mockResponse as Response);
+      mockFetch.mockResolvedValueOnce(mockResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config");
       const config = await loader();
@@ -445,7 +445,7 @@ describe("remoteLoader", () => {
         statusText: "Internal Server Error",
       };
 
-      mockFetch.mockResolvedValue(mockErrorResponse as Response);
+      mockFetch.mockResolvedValue(mockErrorResponse as unknown as Response);
 
       const loader = remoteLoader("http://config-server/api/config", {
         retryInterval: 10, // 减少重试间隔以加快测试

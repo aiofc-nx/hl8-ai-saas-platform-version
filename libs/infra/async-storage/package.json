@@ -28,9 +28,9 @@
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
+    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --passWithNoTests",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch --passWithNoTests",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

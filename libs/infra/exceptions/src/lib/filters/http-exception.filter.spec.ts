@@ -8,20 +8,15 @@ import { HttpExceptionFilter } from "./http-exception.filter.js";
 const createArgumentsHost = (
   request: Record<string, unknown>,
   response: Record<string, unknown> & { header?: jest.Mock },
-): ArgumentsHost => {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => request,
-      getResponse: () => response,
-      getNext: () => undefined,
-    }),
-    switchToRpc: () => undefined as never,
-    switchToWs: () => undefined as never,
-    getArgs: () => [],
-    getArgByIndex: () => undefined,
-    getType: () => "http",
-  } satisfies ArgumentsHost;
-};
+): ArgumentsHost =>
+  ({
+    switchToHttp: () =>
+      ({
+        getRequest: () => request,
+        getResponse: () => response,
+        getNext: () => undefined,
+      }) as unknown as ReturnType<ArgumentsHost["switchToHttp"]>,
+  }) as unknown as ArgumentsHost;
 
 describe("HttpExceptionFilter", () => {
   const createHttpAdapterHost = (reply: jest.Mock): HttpAdapterHost => {
@@ -38,9 +33,12 @@ describe("HttpExceptionFilter", () => {
     const logger = {
       error: jest.fn(),
       warn: jest.fn(),
-    } as unknown as ConstructorParameters<typeof HttpExceptionFilter>[1];
+    };
 
-    const filter = new HttpExceptionFilter(httpAdapterHost, logger);
+    const filter = new HttpExceptionFilter(
+      httpAdapterHost,
+      logger as unknown as ConstructorParameters<typeof HttpExceptionFilter>[1],
+    );
     const exception = new GeneralInternalServerException(
       "服务暂时不可用",
       "INTERNAL_ERROR",
@@ -79,9 +77,12 @@ describe("HttpExceptionFilter", () => {
     const logger = {
       error: jest.fn(),
       warn: jest.fn(),
-    } as unknown as ConstructorParameters<typeof HttpExceptionFilter>[1];
+    };
 
-    const filter = new HttpExceptionFilter(httpAdapterHost, logger);
+    const filter = new HttpExceptionFilter(
+      httpAdapterHost,
+      logger as unknown as ConstructorParameters<typeof HttpExceptionFilter>[1],
+    );
     const exception = new GeneralForbiddenException(
       "当前账户没有权限",
       "NO_AUTH",

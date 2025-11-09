@@ -6,20 +6,15 @@ import { AnyExceptionFilter } from "./any-exception.filter.js";
 const createArgumentsHost = (
   request: Record<string, unknown>,
   response: Record<string, unknown>,
-): ArgumentsHost => {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => request,
-      getResponse: () => response,
-      getNext: () => undefined,
-    }),
-    switchToRpc: () => undefined as never,
-    switchToWs: () => undefined as never,
-    getArgs: () => [],
-    getArgByIndex: () => undefined,
-    getType: () => "http",
-  } satisfies ArgumentsHost;
-};
+): ArgumentsHost =>
+  ({
+    switchToHttp: () =>
+      ({
+        getRequest: () => request,
+        getResponse: () => response,
+        getNext: () => undefined,
+      }) as unknown as ReturnType<ArgumentsHost["switchToHttp"]>,
+  }) as unknown as ArgumentsHost;
 
 describe("AnyExceptionFilter", () => {
   const createHttpAdapterHost = (reply: jest.Mock): HttpAdapterHost => {
@@ -53,9 +48,12 @@ describe("AnyExceptionFilter", () => {
     const httpAdapterHost = createHttpAdapterHost(reply);
     const logger = {
       error: jest.fn(),
-    } as unknown as ConstructorParameters<typeof AnyExceptionFilter>[1];
+    };
 
-    const filter = new AnyExceptionFilter(httpAdapterHost, logger);
+    const filter = new AnyExceptionFilter(
+      httpAdapterHost,
+      logger as unknown as ConstructorParameters<typeof AnyExceptionFilter>[1],
+    );
 
     const error = new Error("boom");
     const response = {};

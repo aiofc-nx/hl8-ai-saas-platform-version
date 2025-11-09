@@ -24,13 +24,20 @@ import {
   jest,
 } from "@jest/globals";
 import { MemoryCacheProvider } from "./memory-cache.provider.js";
-import { CacheStrategy, MemoryCacheOptions } from "../types/cache.types.js";
+import {
+  CacheEvent,
+  CacheEventListener,
+  CacheStrategy,
+  MemoryCacheOptions,
+} from "../types/cache.types.js";
 import { CACHE_EVENTS } from "../constants.js";
 import { ConfigRecord } from "../types/config.types.js";
 
 describe("MemoryCacheProvider", () => {
   let provider: MemoryCacheProvider;
   let options: MemoryCacheOptions;
+
+  const createListener = () => jest.fn<CacheEventListener>();
 
   beforeEach(() => {
     options = {
@@ -284,7 +291,7 @@ describe("MemoryCacheProvider", () => {
 
   describe("事件监听", () => {
     it("应该触发 set 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.SET, listener);
 
@@ -294,13 +301,13 @@ describe("MemoryCacheProvider", () => {
       await provider.set(key, value);
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.SET);
       expect(event?.key).toBe(key);
     });
 
     it("应该触发 get hit 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.HIT, listener);
 
@@ -311,25 +318,25 @@ describe("MemoryCacheProvider", () => {
       await provider.get(key);
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.HIT);
       expect(event?.key).toBe(key);
     });
 
     it("应该触发 get miss 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.MISS, listener);
 
       await provider.get("non-existent-key");
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.MISS);
     });
 
     it("应该触发 delete 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.DELETE, listener);
 
@@ -340,13 +347,13 @@ describe("MemoryCacheProvider", () => {
       await provider.delete(key);
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.DELETE);
       expect(event?.key).toBe(key);
     });
 
     it("应该触发 expire 事件", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.EXPIRE, listener);
 
@@ -361,13 +368,13 @@ describe("MemoryCacheProvider", () => {
       await provider.get(key);
 
       expect(listener).toHaveBeenCalled();
-      const event = listener.mock.calls[0]?.[0];
+      const event = listener.mock.calls[0]?.[0] as CacheEvent | undefined;
       expect(event?.type).toBe(CACHE_EVENTS.EXPIRE);
       expect(event?.key).toBe(key);
     });
 
     it("应该能够移除事件监听器", async () => {
-      const listener = jest.fn();
+      const listener = createListener();
 
       provider.on(CACHE_EVENTS.SET, listener);
       provider.off(CACHE_EVENTS.SET, listener);
@@ -381,8 +388,8 @@ describe("MemoryCacheProvider", () => {
     });
 
     it("应该支持多个监听器", async () => {
-      const listener1 = jest.fn();
-      const listener2 = jest.fn();
+      const listener1 = createListener();
+      const listener2 = createListener();
 
       provider.on(CACHE_EVENTS.SET, listener1);
       provider.on(CACHE_EVENTS.SET, listener2);

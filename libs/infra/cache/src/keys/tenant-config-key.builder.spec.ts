@@ -5,28 +5,31 @@ import {
   type TenantConfigKeyPayload,
 } from "./tenant-config-key.builder.js";
 
+type LoggerStub = {
+  log: jest.Mock;
+  error: jest.Mock;
+  warn: jest.Mock;
+  debug: jest.Mock;
+  verbose: jest.Mock;
+  child: jest.Mock;
+};
+
+const createLoggerStub = (): LoggerStub => {
+  const stub: LoggerStub = {
+    log: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+    verbose: jest.fn(),
+    child: jest.fn(),
+  } as unknown as LoggerStub;
+  stub.child.mockReturnValue(stub);
+  return stub;
+};
+
 describe("TenantConfigKeyBuilder", () => {
   let builder: TenantConfigKeyBuilder;
-  let logger: ReturnType<typeof createLoggerStub>;
-
-  const createLoggerStub = () => {
-    const stub = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn(),
-      child: jest.fn().mockReturnThis(),
-    };
-    return stub as unknown as ReturnType<typeof createLoggerStub> & {
-      log: jest.Mock;
-      error: jest.Mock;
-      warn: jest.Mock;
-      debug: jest.Mock;
-      verbose: jest.Mock;
-      child: jest.Mock;
-    };
-  };
+  let logger: LoggerStub;
 
   beforeEach(() => {
     logger = createLoggerStub();

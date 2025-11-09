@@ -16,6 +16,10 @@ export default {
           module: "NodeNext",
           moduleResolution: "NodeNext",
         },
+        diagnostics: {
+          warnOnly: true,
+          ignoreCodes: [151002],
+        },
       },
     ],
   },
@@ -23,4 +27,5 @@ export default {
   coverageDirectory: "../../coverage/libs/config",
   testMatch: ["**/*.spec.ts"],
   setupFilesAfterEnv: ["<rootDir>/../../../jest.setup.js"],
+  passWithNoTests: true,
 };

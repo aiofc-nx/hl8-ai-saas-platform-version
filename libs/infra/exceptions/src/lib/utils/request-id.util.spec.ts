@@ -3,13 +3,12 @@ import { resolveRequestId } from "./request-id.util.js";
 
 const createHttpContext = (
   request: Record<string, unknown>,
-): ReturnType<ArgumentsHost["switchToHttp"]> => {
-  return {
-    getRequest: <T = unknown>() => request as T,
-    getResponse: <T = unknown>() => ({}) as T,
+): ReturnType<ArgumentsHost["switchToHttp"]> =>
+  ({
+    getRequest: () => request,
+    getResponse: () => ({}),
     getNext: () => undefined,
-  };
-};
+  }) as unknown as ReturnType<ArgumentsHost["switchToHttp"]>;
 
 describe("resolveRequestId", () => {
   it("优先读取 requestId 字段", () => {
