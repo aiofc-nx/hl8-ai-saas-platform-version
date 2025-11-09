@@ -402,7 +402,7 @@ describe("ConfigLoader", () => {
 
 ```json
 {
-  "extends": "@repo/typescript-config/nestjs.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "experimentalDecorators": true, // ❌ 已在 nestjs.json 中定义
     "emitDecoratorMetadata": true // ❌ 已在 nestjs.json 中定义
@@ -414,7 +414,7 @@ describe("ConfigLoader", () => {
 
 ```json
 {
-  "extends": "@repo/typescript-config/nestjs.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
     "baseUrl": "."
