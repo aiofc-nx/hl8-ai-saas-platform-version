@@ -1,145 +1,155 @@
-# 后端项目 TypeScript 和 Jest 配置文档
+# 后端项目 TypeScript 与 Jest 配置指南
 
 ## 概述
 
-本文档详细阐述了 hl8-platform monorepo 后端项目的 TypeScript 配置和 Jest 测试配置，涵盖配置策略、使用方式、最佳实践和常见问题。
+本文档根据当前 `hl8-aisaas-platform` 仓库的实际配置，总结后端项目在 TypeScript 与 Jest 上的统一约定、关键参数、最佳实践与排障方法。所有后续项目与库的配置均应以此为准，确保章程合规与运行一致性。
 
 ## 文档结构
 
 - [TypeScript 配置](#typescript-配置)
+  - 基础配置
+  - 子包配置
+  - 构建配置分离
 - [Jest 测试配置](#jest-测试配置)
-- [配置集成](#配置集成)
+  - 全局 Jest 配置
+  - 子包级 Jest 配置
+  - 运行与调试
 - [测试文件组织](#测试文件组织)
 - [最佳实践](#最佳实践)
 - [常见问题](#常见问题)
+- [配置检查清单](#配置检查清单)
 
 ## TypeScript 配置
 
-### 配置继承体系
+### 基础配置（根目录 `tsconfig.json`）
 
-#### 1. 基础配置
+仓库根目录维持唯一的基础配置，所有后端包通过 `extends` 继承。关键选项如下：
 
-所有后端项目的基础配置继承自monorepo根目录下的 `tsconfig.json`，包含：
+- **模块系统**
+  - `module: "NodeNext"`
+  - `moduleResolution: "NodeNext"`
+  - `target: "ES2022"` 与 `lib: ["ES2022"]`
+- **类型安全**
+  - `strict: true`，`strictNullChecks: true`，`noImplicitAny: true`
+  - `strictBindCallApply: true`，`noFallthroughCasesInSwitch: true`
+- **装饰器支持**
+  - `experimentalDecorators: true`
+  - `emitDecoratorMetadata: true`
+- **ESM 互操作**
+  - `esModuleInterop: true`，`allowSyntheticDefaultImports: true`
+- **构建体验**
+  - `useDefineForClassFields: true`
+  - `incremental: true`，`skipLibCheck: false`
+  - `removeComments: true`，`sourceMap: true`
+- **路径别名**
+  - `baseUrl: "."`
+  - 提供 `@hl8/*` 别名，对应 `libs/infra/*`、`libs/domains/*`、`libs/modules/*` 等源代码路径
 
-- ✅ **ESM 支持**: `module: "NodeNext"`, `moduleResolution: "NodeNext"`
-- ✅ **严格类型检查**: `strict: true`
-- ✅ **声明文件生成**: `declaration: true`, `declarationMap: true`
-- ✅ **ES2022 目标**: `target: "ES2022"`
-- ✅ **索引访问安全**: `noUncheckedIndexedAccess: true`
+> **注意**：根配置未开启 `declaration`，如需生成类型声明，应在具体包的构建配置中自行开启。
 
-#### 3. 项目配置
-
-后端项目通过 `extends` 继承根目录下的 `tsconfig.json` 配置，只覆盖项目特定的选项：
+### 子包配置（示例：`libs/infra/logger/tsconfig.json`）
 
 ```json
-// apps/fastify-api/tsconfig.json
 {
-  "extends": "./tsconfig.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
-    "strictPropertyInitialization": false,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "incremental": false,
+    "baseUrl": ".",
     "outDir": "./dist",
-    "baseUrl": "./",
-    "strict": false,
-    "useDefineForClassFields": false
-  }
-}
-```
-
-### 核心配置选项说明
-
-#### 模块系统配置
-
-```json
-{
-  "module": "NodeNext",
-  "moduleResolution": "NodeNext",
-  "moduleDetection": "force"
-}
-```
-
-- **module: "NodeNext"**: 使用 Node.js 原生的 ES 模块系统
-- **moduleResolution: "NodeNext"**: 遵循 Node.js 的模块解析规则，支持 package.json 的 "exports" 字段
-- **moduleDetection: "force"**: 强制将所有文件识别为模块
-
-#### 装饰器配置
-
-```json
-{
-  "experimentalDecorators": true,
-  "emitDecoratorMetadata": true
-}
-```
-
-- **experimentalDecorators**: 启用装饰器语法（NestJS 核心特性）
-- **emitDecoratorMetadata**: 为装饰器生成运行时元数据，支持依赖注入
-
-#### 类型检查配置
-
-```json
-{
-  "strict": true,
-  "strictNullChecks": false,
-  "noImplicitAny": false,
-  "noUncheckedIndexedAccess": true
-}
-```
-
-- **strict: true**: 启用所有严格类型检查（base.json 中）
-- **strictNullChecks: false**: NestJS 依赖注入需要放宽
-- **noImplicitAny: false**: 允许隐式 any 类型
-- **noUncheckedIndexedAccess: true**: 索引访问返回类型包含 undefined
-
-### 配置分离策略
-
-项目采用 `tsconfig.build.json` 分离开发和生产配置：
-
-```json
-// tsconfig.json - 开发配置
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "incremental": true
+    "isolatedModules": true
   },
-  "include": ["src", "src/**/*.spec.ts"]
-}
-
-// tsconfig.build.json - 构建配置
-{
-  "extends": "./tsconfig.json",
-  "exclude": ["**/*.spec.ts", "test", "node_modules"]
+  "include": ["src", "src/**/*.spec.ts", "src/**/*.test.ts", "test"],
+  "exclude": ["node_modules", "dist"]
 }
 ```
 
-**优势**：
+要点：
 
-- 开发时包含测试文件，IDE 提供完整类型检查
-- 构建时排除测试文件，减少编译时间
-- 配置清晰易维护
+- 仅在必要时覆盖根配置，例如调整 `allowJs`、关闭增量编译或指定 `outDir`。
+- `isolatedModules: true` 确保与 `ts-jest` NodeNext 诊断兼容，避免 `TS151002`。
+- `include` 必须显式纳入单元测试文件（就近原则）。
+- `exclude` 坚持排除 `node_modules`、`dist` 及其他产物目录。
+
+### 构建配置分离
+
+所有库通过 `tsconfig.build.json` 与开发配置分离：
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "__tests__"]
+}
+```
+
+- 构建时屏蔽测试文件，确保产物纯净。
+- 开发时仍由 `tsconfig.json` 提供完整类型检查。
+- 若需要生成声明文件，可在 `tsconfig.build.json` 中补充 `declaration: true` 与 `emitDeclarationOnly: true`。
 
 ## Jest 测试配置
 
-### 配置架构
+### 全局配置（根目录 `jest.config.ts` 与 `jest.setup.js`）
 
-Jest 测试配置采用三层次配置：
+```typescript
+import path from "node:path";
+import type { Config } from "jest";
 
-1. **全局设置** (`jest.setup.js`): 根目录的全局测试配置
-2. **项目配置** (`jest.config.ts`): 每个项目的 Jest 配置
-3. **测试文件**: 单元测试、集成测试、E2E 测试
+const workspaceRoot = path.resolve();
+const libsRoot = path.join(workspaceRoot, "libs");
 
-### 全局配置 (jest.setup.js)
+const config: Config = {
+  displayName: "workspace",
+  preset: "ts-jest/presets/default-esm",
+  testEnvironment: "node",
+  rootDir: workspaceRoot,
+  extensionsToTreatAsEsm: [".ts"],
+  testMatch: ["**/*.spec.ts"],
+  transform: {
+    "^.+\\.ts$": [
+      "ts-jest",
+      {
+        useESM: true,
+        tsconfig: path.resolve(workspaceRoot, "tsconfig.base.json"),
+        diagnostics: {
+          warnOnly: true,
+          ignoreCodes: [151002],
+        },
+      },
+    ],
+  },
+  moduleNameMapper: {
+    "^(\\.{1,2}/.*)\\.js$": "$1",
+    "^@hl8/logger$": path.resolve(libsRoot, "infra/logger/src/index.ts"),
+    "^@hl8/exceptions$": path.resolve(libsRoot, "infra/exceptions/src/index.ts"),
+    "^@hl8/config$": path.resolve(libsRoot, "infra/config/src/index.ts"),
+    "^@hl8/cache$": path.resolve(libsRoot, "infra/cache/src/index.ts"),
+    "^@hl8/bootstrap$": path.resolve(libsRoot, "infra/bootstrap/src/index.ts"),
+    "^@hl8/async-storage$": path.resolve(libsRoot, "infra/async-storage/src/index.ts"),
+    "^@hl8/multi-tenancy$": path.resolve(libsRoot, "infra/multi-tenancy/src/index.ts"),
+    "^@hl8/persistence$": path.resolve(libsRoot, "infra/persistence/src/index.ts"),
+    "^@hl8/persistence-postgres$": path.resolve(libsRoot, "infra/persistence/postgres/src/index.ts"),
+    "^@hl8/persistence-mongo$": path.resolve(libsRoot, "infra/persistence/mongo/src/index.ts"),
+    "^@hl8/user$": path.resolve(libsRoot, "domains/user/src/index.ts"),
+    "^@hl8/auth$": path.resolve(libsRoot, "domains/auth/src/index.ts"),
+  },
+  moduleFileExtensions: ["ts", "js"],
+  setupFilesAfterEnv: [path.resolve(workspaceRoot, "jest.setup.js")],
+  transformIgnorePatterns: ["node_modules/(?!(@hl8|ioredis|class-transformer|class-validator)/)"],
+};
 
-所有项目的全局测试配置位于根目录：
+export default config;
+```
 
 ```javascript
-// jest.setup.js
-jest.setTimeout(10000); // 测试超时时间
+require("reflect-metadata");
 
-// 确保 jest 在全局范围内可用
+jest.setTimeout(10000);
+
 if (typeof global.jest === "undefined") {
   global.jest = jest;
 }
 
-// 全局测试配置
 global.console = {
   ...console,
   log: jest.fn(),
@@ -150,28 +160,35 @@ global.console = {
 };
 ```
 
-**作用**：
+核心说明：
 
-- 统一的测试超时时间（10 秒）
-- 禁用测试中的 console 输出（避免干扰）
-- 确保 jest 全局可用
+- 统一启用 `ts-jest/presets/default-esm` 处理 ES 模块。
+- 通过 `moduleNameMapper` 映射所有内置包，确保测试直接引用源码。
+- `transformIgnorePatterns` 仅允许必要的第三方包经过转换。
+- 全局 setup 注入 `reflect-metadata` 并屏蔽默认 console 输出。
 
-### 项目级 Jest 配置
+> **提示**：`tsconfig.base.json` 用于 Jest 转换器，可在存在差异时覆盖测试专用编译选项；若缺失请及时补充。
 
-#### 基础设施库配置
+### 子包级配置（示例：`libs/infra/cache/jest.config.ts`）
 
 ```typescript
-// libs/infra/config/jest.config.ts
+import path from "node:path";
+import { createRequire } from "node:module";
+
+const require = createRequire(path.resolve(process.cwd(), "package.json"));
+
 export default {
-  displayName: "config",
+  displayName: "@hl8/cache",
   preset: "ts-jest/presets/default-esm",
   testEnvironment: "node",
   rootDir: ".",
   extensionsToTreatAsEsm: [".ts"],
   moduleNameMapper: {
-    "^(\\.{1,2}/.*)\\.js$": "$1", // ES 模块路径映射
-    "^@/(.*)$": "<rootDir>/src/$1", // 路径别名
+    "^(\\.{1,2}/.*)\\.js$": "$1",
+    "^@anchan828/nest-redlock$": "<rootDir>/src/testing/redlock.mock.ts",
+    "^@anchan828/nest-redlock/dist/cjs/redlock.service.js$": "<rootDir>/src/testing/redlock.mock.ts",
   },
+  transformIgnorePatterns: ["node_modules/(?!(@anchan828/nest-redlock|redlock)/)"],
   transform: {
     "^.+\\.ts$": [
       "ts-jest",
@@ -181,506 +198,113 @@ export default {
           module: "NodeNext",
           moduleResolution: "NodeNext",
         },
-      },
-    ],
-  },
-  moduleFileExtensions: ["ts", "js"],
-  coverageDirectory: "../../coverage/libs/config",
-  testMatch: ["**/*.spec.ts"],
-  setupFilesAfterEnv: ["<rootDir>/../../../jest.setup.js"],
-};
-```
-
-#### 应用级配置
-
-```typescript
-// apps/fastify-api/jest.config.ts
-export default {
-  collectCoverageFrom: ["src/**/*.(t|j)s", "!src/**/*.spec.ts", "!src/**/*.test.ts"],
-  coverageDirectory: "../coverage",
-  moduleFileExtensions: ["js", "json", "ts"],
-  rootDir: "src",
-  testEnvironment: "node",
-  testMatch: ["**/*.spec.ts", "../test/integration/**/*.spec.ts", "../test/e2e/**/*.spec.ts"],
-  preset: "ts-jest/presets/default-esm",
-  extensionsToTreatAsEsm: [".ts"],
-  transform: {
-    "^.+\\.ts$": [
-      "ts-jest",
-      {
-        useESM: true,
-        tsconfig: {
-          module: "ESNext",
-          moduleResolution: "NodeNext",
+        diagnostics: {
+          warnOnly: true,
+          ignoreCodes: [151002],
         },
       },
     ],
   },
-  moduleNameMapper: {
-    "^@/(.*)$": "<rootDir>/$1",
-    "^(\\.{1,2}/.*)\\.js$": "$1",
-    // Monorepo 工作区映射
-    "^@hl8/(.*)$": "/path/to/libs/$1/dist/index.js",
-  },
+  moduleFileExtensions: ["ts", "js"],
+  coverageDirectory: "../../coverage/libs/cache",
+  testMatch: ["**/*.spec.ts"],
+  setupFilesAfterEnv: ["<rootDir>/../../../jest.setup.js"],
+  passWithNoTests: true,
 };
 ```
 
-### 核心配置选项说明
+遵循原则：
 
-#### preset 配置
+- 显式映射 `.js` 结尾的相对路径，保证 ES 模块兼容。
+- 只在必要时新增第三方包映射或转换规则。
+- 复用根级 `jest.setup.js`，保持全局测试体验一致。
 
-```typescript
-preset: "ts-jest/presets/default-esm";
-```
+### 运行与调试
 
-- 使用 `default-esm` preset 支持 ES 模块
-- 自动配置 TypeScript 转换
-
-#### 环境配置
-
-```typescript
-testEnvironment: "node"; // Node.js 环境
-extensionsToTreatAsEsm: [".ts"]; // 将 .ts 文件视为 ES 模块
-```
-
-#### 模块路径映射
-
-```typescript
-moduleNameMapper: {
-  "^(\\.{1,2}/.*)\\.js$": "$1",      // ES 模块导入路径
-  "^@/(.*)$": "<rootDir>/src/$1",    // 路径别名
-  "^@hl8/(.*)$": "..."               // Monorepo 包映射
-}
-```
-
-**关键点**：
-
-- ES 模块导入需要 `.js` 扩展名，但 Jest 需要映射回源文件
-- 支持 TypeScript 路径别名
-- Monorepo 包映射到构建产物
-
-#### Transform 配置
-
-```typescript
-transform: {
-  "^.+\\.ts$": [
-    "ts-jest",
-    {
-      useESM: true,
-      tsconfig: {
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-      },
-    },
-  ],
-}
-```
-
-- **useESM: true**: 使用 ES 模块
-- **tsconfig**: 传递给 TypeScript 编译器的选项
-- 保持与项目 TypeScript 配置一致
-
-#### 测试文件匹配
-
-```typescript
-testMatch: [
-  "**/*.spec.ts", // 单元测试
-  "../test/integration/**/*.spec.ts", // 集成测试
-  "../test/e2e/**/*.spec.ts", // E2E 测试
-];
-```
-
-#### 覆盖率配置
-
-```typescript
-collectCoverageFrom: [
-  "src/**/*.(t|j)s",
-  "!src/**/*.spec.ts",  // 排除测试文件
-  "!src/**/*.test.ts"
-],
-coverageDirectory: "../coverage"
-```
-
-## 配置集成
-
-### TypeScript + Jest 集成
-
-确保 Jest 配置与 TypeScript 配置兼容：
-
-```typescript
-// jest.config.ts
-transform: {
-  "^.+\\.ts$": [
-    "ts-jest",
-    {
-      useESM: true,
-      tsconfig: {
-        // 与 tsconfig.json 保持一致
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-        // 测试环境可能需要放宽某些选项
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
-    },
-  ],
-}
-```
-
-### NODE_OPTIONS 配置
-
-运行 Jest 测试时需要使用 `--experimental-vm-modules` 标志：
-
-```json
-// package.json
-{
-  "scripts": {
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch"
-  }
-}
-```
-
-**原因**：Jest 需要这个标志来支持 ES 模块的动态导入。
+- **脚本入口**：根目录通过 Turbo 任务执行测试，命令为 `pnpm test`（实际执行 `turbo test`）。各子包可直接运行 `pnpm --filter <package> test`，调用本地 `jest.config.ts`。
+- **环境变量**：当前脚本未显式设置 `NODE_OPTIONS=--experimental-vm-modules`，Jest 30 + `ts-jest` 已原生兼容 ES 模块。如需在独立运行时遇到问题，可在命令前手动追加该变量。
+- **无测试包处理**：部分基础设施包暂未编写单测，`package.json` 中的 `test`/`test:watch`/`test:cov` 脚本追加 `--passWithNoTests`，并在对应 `jest.config.*` 内设置 `passWithNoTests: true`，避免 Turbo 流程因缺少匹配用例而失败。
+- **覆盖率**：子包若需要覆盖率统计，可在包级 `jest.config.ts` 中设置 `collectCoverageFrom` 与 `coverageDirectory`。根配置未强制输出全局覆盖率。
 
 ## 测试文件组织
 
-### 分层测试架构
-
-项目遵循分层测试架构：
+### 目录结构
 
 ```
-项目根目录/
-├── src/                    # 源代码
+<package>/
+├── src/
 │   ├── *.ts
-│   └── *.spec.ts          # 单元测试（就近原则）
-├── test/                   # 测试目录（src 外）
-│   ├── integration/       # 集成测试
+│   └── *.spec.ts          // 单元测试（就近原则，命名 {filename}.spec.ts）
+├── test/
+│   ├── integration/       // 集成测试
 │   │   └── **/*.spec.ts
-│   └── e2e/               # 端到端测试
+│   └── e2e/               // 端到端测试
 │       └── **/*.spec.ts
-└── coverage/              # 测试覆盖率报告
+└── coverage/              // 可选：覆盖率报告输出目录
 ```
 
-### 单元测试
-
-- **位置**: 与被测试文件同一目录
-- **命名**: `{被测试文件名}.spec.ts`
-- **作用**: 测试单个函数、类或模块
-
-```typescript
-// src/lib/config-loader.spec.ts
-import { ConfigLoader } from "./config-loader";
-
-describe("ConfigLoader", () => {
-  it("should load configuration from file", () => {
-    // 测试逻辑
-  });
-});
-```
-
-### 集成测试
-
-- **位置**: `test/integration/`
-- **命名**: `*.spec.ts`
-- **作用**: 测试多个模块的协作
-
-### 端到端测试
-
-- **位置**: `test/e2e/`
-- **命名**: `*.spec.ts`
-- **作用**: 测试完整的业务流程
+- 单元测试必须与源码文件同目录，命名 `{被测文件名}.spec.ts`。
+- 集成与端到端测试统一放置在包外层的 `test/` 目录，命名 `*.spec.ts`。
+- 遵循《项目章程》测试覆盖率要求：核心逻辑 ≥ 80%，关键路径 ≥ 90%，公共 API 必须编写测试。
 
 ## 最佳实践
 
-### TypeScript 配置
+### TypeScript
 
-#### 1. 避免重复配置
+- **最小覆盖原则**：子包禁止重复声明根配置已存在的选项，只在确有差异时覆盖。
+- **路径别名复用**：如需新增别名，请同时更新根 `tsconfig.json` 与 `jest.config.ts`，保持编译与测试一致。
+- **构建产物隔离**：确保所有产物写入 `dist/`，并在 `package.json` 的 `exports` 中指向编译结果。
 
-❌ **错误示例**：
+### Jest
 
-```json
-{
-  "extends": "../../../tsconfig.json",
-  "compilerOptions": {
-    "experimentalDecorators": true, // ❌ 已在 nestjs.json 中定义
-    "emitDecoratorMetadata": true // ❌ 已在 nestjs.json 中定义
-  }
-}
-```
-
-✅ **正确示例**：
-
-```json
-{
-  "extends": "../../../tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "baseUrl": "."
-  }
-}
-```
-
-#### 2. 使用配置分离
-
-- `tsconfig.json`: 开发配置，包含测试文件
-- `tsconfig.build.json`: 构建配置，排除测试文件
-
-#### 3. 合理使用 include/exclude
-
-```json
-{
-  "include": ["src", "src/**/*.spec.ts"],
-  "exclude": ["node_modules", "dist", "**/*.js"]
-}
-```
-
-### Jest 配置
-
-#### 1. 保持 TypeScript 配置一致
-
-Jest 的 tsconfig 选项应与项目的 tsconfig.json 保持一致：
-
-```typescript
-transform: {
-  "^.+\\.ts$": [
-    "ts-jest",
-    {
-      useESM: true,
-      tsconfig: {
-        // 与 tsconfig.json 保持一致
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-      },
-    },
-  ],
-}
-```
-
-#### 2. 正确的模块路径映射
-
-```typescript
-moduleNameMapper: {
-  // ES 模块路径映射（必需）
-  "^(\\.{1,2}/.*)\\.js$": "$1",
-
-  // 路径别名
-  "^@/(.*)$": "<rootDir>/src/$1",
-
-  // Monorepo 包映射
-  "^@hl8/(.*)$": "<rootDir>/../../libs/$1/dist/index.js"
-}
-```
-
-#### 3. 合理设置覆盖率收集
-
-```typescript
-collectCoverageFrom: [
-  "src/**/*.ts",
-  "!src/**/*.spec.ts", // 排除测试文件
-  "!src/**/*.interface.ts", // 排除接口定义
-  "!src/**/*.dto.ts", // 排除 DTO
-];
-```
+- **保持与 TS 配置一致**：若变更模块系统或目标版本，需同步更新 `ts-jest` 的 `tsconfig` 选项。
+- **合理 mock**：对外部依赖或第三方库，通过 `moduleNameMapper` 或 `__mocks__` 目录集中管理。
+- **禁用多余输出**：如需在测试中调试，可在用例内部临时恢复 `console`，测试结束后需要手动还原。
 
 ### 测试编写
 
-#### 1. 使用 describe 组织测试
-
-```typescript
-describe("ClassName", () => {
-  describe("methodName", () => {
-    it("should do something", () => {
-      // 测试逻辑
-    });
-  });
-});
-```
-
-#### 2. 使用 beforeEach/afterEach
-
-```typescript
-describe("Service", () => {
-  let service: TestService;
-
-  beforeEach(() => {
-    service = new TestService();
-  });
-
-  afterEach(() => {
-    // 清理
-  });
-});
-```
-
-#### 3. 测试异步代码
-
-```typescript
-it("should handle async operations", async () => {
-  const result = await service.asyncMethod();
-  expect(result).toBeDefined();
-});
-```
+- 使用 `describe` 结构化推理路径，`beforeEach/afterEach` 管理环境。
+- 对异步行为使用 `async/await` 与超时断言。
+- 针对异常流程使用 `expect(asyncFn).rejects.toThrowError(...)` 明确断言。
 
 ## 常见问题
 
-### TypeScript 问题
+### TypeScript
 
-#### 1. 装饰器不生效
+- **找不到模块**：确认是否遗漏 `.js` 后缀，或忘记同步更新 `tsconfig.json` 与 `jest.config.ts` 的别名。
+- **装饰器报错**：检查子包是否继承了根配置的 `experimentalDecorators` 与 `emitDecoratorMetadata`。
+- **类型收紧导致报错**：如确需放宽，可在局部通过泛型约束或类型断言解决，不建议修改全局 `strict`。
 
-**问题**: NestJS 装饰器报错或无效
+### Jest
 
-**解决方案**:
-
-```json
-{
-  "compilerOptions": {
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
-  }
-}
-```
-
-#### 2. 模块导入错误
-
-**问题**: `Cannot find module` 错误
-
-**解决方案**:
-
-- 确保使用 `.js` 扩展名导入
-- 检查 `moduleResolution` 设置
-- 配置 `paths` 别名
-
-#### 3. 严格类型检查问题
-
-**问题**: `strict` 模式报错过多
-
-**解决方案**:
-
-```json
-{
-  "compilerOptions": {
-    "strict": false,
-    "noImplicitAny": false,
-    "strictNullChecks": false
-  }
-}
-```
-
-### Jest 问题
-
-#### 1. ES 模块导入错误
-
-**问题**: `SyntaxError: Cannot use import statement outside a module`
-
-**解决方案**:
-
-- 使用 `NODE_OPTIONS=--experimental-vm-modules jest`
-- 配置 `extensionsToTreatAsEsm: [".ts"]`
-- 使用 `preset: "ts-jest/presets/default-esm"`
-
-#### 2. 路径映射不生效
-
-**问题**: 模块路径别名不工作
-
-**解决方案**:
-
-```typescript
-moduleNameMapper: {
-  "^@/(.*)$": "<rootDir>/src/$1"
-}
-```
-
-#### 3. Monorepo 包导入失败
-
-**问题**: 无法导入 monorepo 中的其他包
-
-**解决方案**:
-
-```typescript
-moduleNameMapper: {
-  "^@hl8/(.*)$": "<rootDir>/../../libs/$1/dist/index.js"
-}
-```
-
-#### 4. 装饰器在测试中失效
-
-**问题**: 装饰器在测试中报错
-
-**解决方案**:
-
-```typescript
-transform: {
-  "^.+\\.ts$": [
-    "ts-jest",
-    {
-      useESM: true,
-      tsconfig: {
-        experimentalDecorators: true,
-        emitDecoratorMetadata: true
-      }
-    }
-  ]
-}
-```
-
-### 性能问题
-
-#### 1. 测试运行缓慢
-
-**解决方案**:
-
-- 启用 Jest 缓存
-- 使用 `--maxWorkers` 并行运行
-- 优化模块路径映射
-
-#### 2. 增量编译缓慢
-
-**解决方案**:
-
-```json
-{
-  "compilerOptions": {
-    "incremental": true
-  }
-}
-```
+- **ESM 导入异常**：确认 `preset: "ts-jest/presets/default-esm"` 与 `extensionsToTreatAsEsm: [".ts"]` 均已配置；必要时添加 `NODE_OPTIONS=--experimental-vm-modules`。
+- **路径映射失效**：确保 `moduleNameMapper` 中的路径与实际文件结构一致，避免漏写 `src` 或 `dist`。
+- **第三方包未转换**：将需要转译的包加入 `transformIgnorePatterns` 的白名单。
+- **console 输出被隐藏**：如需调试，可在测试用例中临时调用 `jest.spyOn(console, "log").mockImplementation(console.log)`。
 
 ## 配置检查清单
 
-创建新后端项目时，确保以下配置正确：
+### TypeScript
 
-### TypeScript 配置
+- [ ] 子包 `tsconfig.json` 已继承根配置并仅覆盖必要选项。
+- [ ] `include` 包含单元测试文件，`exclude` 排除产物与依赖。
+- [ ] 构建配置通过 `tsconfig.build.json` 排除测试文件。
+- [ ] 新增路径别名时同步更新根级 `tsconfig.json` 与 Jest 映射。
 
-- [ ] 继承 `@repo/typescript-config/nestjs.json`
-- [ ] 使用 `tsconfig.build.json` 分离配置
-- [ ] 不重复定义已在 monorepo 根目录下的 `tsconfig.json` 中的选项
-- [ ] 正确配置 `include` 和 `exclude`
-- [ ] 配置 `outDir` 和 `baseUrl`
+### Jest
 
-### Jest 配置
+- [ ] 使用 `ts-jest/presets/default-esm` 并启用 `useESM: true`。
+- [ ] `moduleNameMapper` 正确映射相对路径 `.js` 后缀与 `@hl8/*` 别名。
+- [ ] `setupFilesAfterEnv` 指向根目录 `jest.setup.js`。
+- [ ] 单元测试 `testMatch` 仅匹配 `{filename}.spec.ts`，集成测试存放于 `test/integration/`。
+- [ ] 必要的第三方包已加入 `transformIgnorePatterns` 白名单。
 
-- [ ] 使用 `ts-jest/presets/default-esm` preset
-- [ ] 配置 `extensionsToTreatAsEsm: [".ts"]`
-- [ ] 配置正确的 `moduleNameMapper`
-- [ ] 配置 `setupFilesAfterEnv` 指向全局设置
-- [ ] 配置 `transform` 与 TypeScript 配置一致
-- [ ] 配置 `testMatch` 匹配测试文件
+### 执行命令
 
-### package.json 脚本
+- [ ] 使用 `pnpm test` 触发 Turbo 管道，按包并行执行。
+- [ ] 需要覆盖率时在对应包内配置 `collectCoverageFrom` 与 `coverageDirectory`。
+- [ ] 遇到 ES 模块执行问题时，考虑临时追加 `NODE_OPTIONS=--experimental-vm-modules`。
 
-- [ ] 使用 `NODE_OPTIONS=--experimental-vm-modules jest`
-- [ ] 配置 `test`, `test:watch`, `test:cov` 脚本
+---
 
-## 总结
-
-本文档阐述了后端项目的 TypeScript 和 Jest 配置体系：
-
-1. **配置继承**: 通过继承统一的配置包确保一致性
-2. **ES 模块支持**: 全面使用 ES 模块系统
-3. **类型安全**: 启用严格类型检查（根据需要放宽）
-4. **测试支持**: Jest 配置与 TypeScript 配置保持一致
-5. **最佳实践**: 遵循配置分离、避免重复、保持一致性
-
-通过遵循本文档的指导，可以确保后端项目的配置正确、高效且易于维护。
+遵循以上约定，可确保所有后端模块在类型安全、测试执行与运行时行为上保持一致，并满足《项目章程》对于技术栈、测试策略和模块规范的要求。若配置发生变更，应同步更新本文档及相关模板，确保团队成员能够快速获取最新指导。
