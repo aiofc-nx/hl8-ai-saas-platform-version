@@ -1,0 +1,47 @@
+{
+  "name": "@hl8/multi-tenancy",
+  "version": "0.1.0",
+  "description": "多租户上下文与隔离支撑模块，封装 CLS、拦截器与仓储基类",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./index.js": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "lint": "eslint .",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hl8/async-storage": "workspace:*",
+    "@hl8/config": "workspace:*",
+    "@hl8/exceptions": "workspace:*",
+    "@hl8/logger": "workspace:*",
+    "@mikro-orm/core": "^6.4.16",
+    "@nestjs/common": "11.1.8",
+    "@nestjs/core": "11.1.8",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.14.2",
+    "nestjs-cls": "^6.0.1",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "24.10.0",
+    "jest": "^30.2.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
