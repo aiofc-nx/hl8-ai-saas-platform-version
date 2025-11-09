@@ -1,0 +1,67 @@
+{
+  "name": "@hl8/bootstrap",
+  "version": "1.0.0",
+  "description": "Bootstrap 模块 - 提供应用启动和配置管理",
+  "keywords": [
+    "nestjs",
+    "bootstrap",
+    "application",
+    "startup",
+    "configuration"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./index.js": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hl8/logger": "workspace:*",
+    "@hl8/swagger": "workspace:*",
+    "@nestjs/common": "11.1.8",
+    "@nestjs/core": "11.1.8",
+    "@nestjs/platform-fastify": "11.1.8",
+    "chalk": "^4.1.2",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.14.2",
+    "debug": "^4.3.7",
+    "dotenv": "^17.2.2",
+    "dotenv-expand": "^12.0.0",
+    "fastify": "^5.6.1",
+    "js-yaml": "^4.1.0",
+    "lodash.merge": "^4.6.2"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@types/debug": "^4.1.12",
+    "@types/jest": "^30.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/lodash.merge": "^4.6.9",
+    "@types/node": "24.10.0",
+    "jest": "^30.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
