@@ -1,0 +1,56 @@
+{
+  "name": "@hl8/exceptions",
+  "version": "1.0.0",
+  "description": "异常处理模块 - 提供统一的异常处理机制和异常类型定义",
+  "keywords": [
+    "nestjs",
+    "exceptions",
+    "error-handling",
+    "error-management"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./index.js": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hl8/logger": "workspace:*",
+    "@nestjs/common": "11.1.8",
+    "@nestjs/core": "11.1.8",
+    "@nestjs/swagger": "^11.2.1"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@types/debug": "^4.1.12",
+    "@types/jest": "^30.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/lodash.merge": "^4.6.9",
+    "@types/node": "24.10.0",
+    "jest": "^30.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
