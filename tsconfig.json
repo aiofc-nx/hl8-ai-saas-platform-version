@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Root",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "incremental": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "baseUrl": ".",
+    "paths": {
+      "@hl8/multi-tenancy": ["libs/infra/multi-tenancy/src/index.ts"],
+      "@hl8/modules-user": ["libs/modules/user/src/index.ts"],
+      "@hl8/modules-auth": ["libs/modules/auth/src/index.ts"],
+      "@hl8/user": ["libs/domains/user/src/index.ts"],
+      "@hl8/auth": ["libs/domains/auth/src/index.ts"],
+      "@hl8/domains-user": ["libs/domains/user/src/index.ts"],
+      "@hl8/domains-auth": ["libs/domains/auth/src/index.ts"],
+      "@hl8/logger": ["libs/infra/logger/src/index.ts"],
+      "@hl8/exceptions": ["libs/infra/exceptions/src/index.ts"],
+      "@hl8/config": ["libs/infra/config/src/index.ts"],
+      "@hl8/cache": ["libs/infra/cache/src/index.ts"],
+      "@hl8/bootstrap": ["libs/infra/bootstrap/src/index.ts"],
+      "@hl8/async-storage": ["libs/infra/async-storage/src/index.ts"],
+      "@hl8/persistence": ["libs/infra/persistence/src/index.ts"],
+      "@hl8/persistence-postgres": [
+        "libs/infra/persistence/postgres/src/index.ts"
+      ],
+      "@hl8/persistence-mongo": ["libs/infra/persistence/mongo/src/index.ts"]
+    }
+  }
+}

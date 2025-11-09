@@ -1,0 +1,63 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres_container
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=aiofix
+      - POSTGRES_PASSWORD=aiofix
+      - POSTGRES_DB=hl8-platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - 25050:80
+    depends_on:
+      - postgres
+  redis:
+    image: redis:7
+    container_name: redis_container
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+  # Redis Commander - Redis 管理界面
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: aiofix-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+  mongodb:
+    image: mongo:7
+    container_name: mongodb_container
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=aiofix
+      - MONGO_INITDB_ROOT_PASSWORD=aiofix
+      - MONGO_INITDB_DATABASE=hl8-platform
+    volumes:
+      - mongodb_data:/data/db
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  mongodb_data:
+    driver: local
+networks:
+  default:
+    name: app-network

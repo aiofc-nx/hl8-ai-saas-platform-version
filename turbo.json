@@ -1,0 +1,76 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "globalEnv": [
+    "NODE_ENV",
+    "PORT",
+    "HOST",
+    "LOG_LEVEL",
+    "API_URL",
+    "AUTH_SESSION_AGE",
+    "AUTH_SECRET",
+    "AUTH_URL",
+    "DB_HOST",
+    "DB_PORT",
+    "DB_DATABASE",
+    "DB_USERNAME",
+    "DB_PASSWORD",
+    "DB_POOL_MIN",
+    "DB_POOL_MAX",
+    "DB_IDLE_TIMEOUT",
+    "DB_ACQUIRE_TIMEOUT",
+    "DB_SLOW_QUERY_THRESHOLD",
+    "DB_DEBUG",
+    "REDIS_HOST",
+    "REDIS_PORT",
+    "REDIS_PASSWORD",
+    "REDIS_DB",
+    "CACHE_TTL",
+    "CACHE_MAX_ITEMS",
+    "METRICS_ENABLED",
+    "METRICS_PATH",
+    "LOGGING_LEVEL",
+    "LOGGING_PRETTY_PRINT",
+    "RATE_LIMIT_TTL",
+    "RATE_LIMIT_MAX"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "*.tsbuildinfo"]
+    },
+    "type-check": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "tsconfig.json", "tsconfig.*.json"]
+    },
+    "check-types": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "tsconfig.json", "tsconfig.*.json"]
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "lint:check": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "jest.config.*"]
+    },
+    "test:cov": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build", "build"]
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

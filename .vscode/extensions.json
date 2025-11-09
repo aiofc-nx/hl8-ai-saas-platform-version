@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "imgildev.vscode-auto-barrel",
+    "dbaeumer.vscode-eslint",
+    "pflannery.vscode-versionlens",
+    "ms-azuretools.vscode-docker"
+  ]
+}
