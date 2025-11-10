@@ -1,8 +1,16 @@
----
-description: 项目章程
-globs:
-alwaysApply: true
----
+<!--
+Sync Impact Report
+Version: 1.1.0 → 1.2.0
+Modified Principles: III. 技术栈约束原则
+Added Sections: 附加约束（项目定位与架构要求）
+Removed Sections: 无
+Templates:
+- .specify/templates/plan-template.md ⚠ 文件已删除，需确认是否恢复以继续执行章程校验流程
+- .specify/templates/spec-template.md ⚠ 文件已删除，需确认是否恢复以继续执行章程校验流程
+- .specify/templates/tasks-template.md ⚠ 文件已删除，需确认是否恢复以继续执行章程校验流程
+Follow-up TODOs: TODO(RESTORE_SPECKIT_ASSETS): speckit 模板及命令资产已被移除，需确认后续治理工具链策略
+-->
+
 # hl8-aisaas-platform Constitution
 
 ## Core Principles
@@ -77,3 +85,68 @@ alwaysApply: true
 - 多租户能力为硬性要求，业务实现需确保租户隔离、自助开通与生命周期管理策略完备。
 - 数据存储与访问层必须实现严格的租户级数据隔离与安全防护。
 - 业务模块开发需遵循 DDD + Clean Architecture + CQRS + Event Sourcing + 事件驱动架构（EDA）的混合模式，确保可演化性与高可观测性。
+
+## 开发流程
+
+- 所有规划文档必须通过 Constitution Check，逐项验证八项核心原则的合规性。
+- 设计评审与代码评审需引用本章程条款做出合规结论，发现偏差时必须在实施前补齐方案。
+- 交付前需完成测试分层验证，确保覆盖率门槛与模块规范均已满足。
+
+## Governance
+
+- 本章程优先级高于其他内部流程文件，若出现冲突，应以章程为准。
+- 章程变更需提交书面提案，获得项目治理小组批准并更新版本号与修订记录。
+- 每季度开展合规审查，随机抽取项目成果检查八项原则落实情况，必要时启动整改计划。
+- 所有团队成员有责任在评审、开发与交付过程中主动引用章程条款并记录合规性证明。
+
+**Version**: 1.2.0 | **Ratified**: 2025-11-09 | **Last Amended**: 2025-11-10
+# [PROJECT_NAME] Constitution
+<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+
+## Core Principles
+
+### [PRINCIPLE_1_NAME]
+<!-- Example: I. Library-First -->
+[PRINCIPLE_1_DESCRIPTION]
+<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+
+### [PRINCIPLE_2_NAME]
+<!-- Example: II. CLI Interface -->
+[PRINCIPLE_2_DESCRIPTION]
+<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+
+### [PRINCIPLE_3_NAME]
+<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
+[PRINCIPLE_3_DESCRIPTION]
+<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+
+### [PRINCIPLE_4_NAME]
+<!-- Example: IV. Integration Testing -->
+[PRINCIPLE_4_DESCRIPTION]
+<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+
+### [PRINCIPLE_5_NAME]
+<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
+[PRINCIPLE_5_DESCRIPTION]
+<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+
+## [SECTION_2_NAME]
+<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+
+[SECTION_2_CONTENT]
+<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+
+## [SECTION_3_NAME]
+<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+
+[SECTION_3_CONTENT]
+<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+
+## Governance
+<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+
+[GOVERNANCE_RULES]
+<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+
+**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
+<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
