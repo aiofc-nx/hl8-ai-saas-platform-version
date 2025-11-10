@@ -1,6 +1,14 @@
 # Research Findings: 多租户与权限设计规范
 
+## 基础资料整理
+
+- `docs/memos/nestjs-saas-tenant-boilerplate-multitenancy.md`：总结第三方脚手架中 `TenantContextMiddleware`、`TenantAwareRepository`、CASL 守卫等关键做法，同时指出缺乏数据库强约束与审计的风险。
+- `docs/memos/hl8-multitenant-permission-plan.md`：梳理我方平台的多层隔离策略（`TenantExecutionMiddleware`、`TenantScopedRepository`、数据库唯一索引、事件溯源/EDA 联动）与角色治理要求。
+- `libs/infra/multi-tenancy`：提供 CLS 请求作用域、上下文执行器、仓储基类、事件订阅器及拦截器，确保租户上下文在 HTTP/消息/任务场景保持一致。
+- `libs/infra/mikro-orm-nestjs`：封装 MikroORM Provider、EntityManager fork、自动实体加载、多上下文中间件及集成测试样例，支撑 DDD + CQRS + ES 场景的 ORM 能力。
+
 ## 决策 1：跨租户共享数据访问控制
+
 - **Decision**: 仅允许在规范登记的共享资源白名单范围内进行跨租户访问，同时必须通过 CASL 全局能力策略校验并写入完整审计日志。
 - **Rationale**: 白名单 + 能力策略 + 审计三重约束可兼顾业务灵活性与安全性，避免任意域自行放行导致不可控的越权风险。
 - **Alternatives considered**:
@@ -8,6 +16,7 @@
   - 完全禁止跨租户访问 → 无法满足共享配置、全局看板等合法场景，需要额外复制数据，增加运维成本。
 
 ## 决策 2：第三方接入缺失租户标识的补偿机制
+
 - **Decision**: 在接入层依据签约信息或 API Key 补写/推断 `tenantId`，建立租户映射策略并记录映射审计日志，纳入合规复核。
 - **Rationale**: 强制映射可保持系统内所有请求具备明确租户上下文，审计日志便于后续追溯异常；接入层是唯一可信的补偿位置，可集中管理策略。
 - **Alternatives considered**:
@@ -15,6 +24,7 @@
   - 允许白名单接口跳过租户校验 → 会在业务层引入大量特判，难以维护，也与统一隔离策略冲突。
 
 ## 决策 3：多层级数据隔离设计
+
 - **Decision**: 规范要求同时使用 `TenantContextExecutor` + `BaseTenantRepository` + `TenantAwareSubscriber` 构成应用层防线，并辅以数据库组合唯一索引、事件流租户分区与缓存命名空间隔离。
 - **Rationale**: 多层次隔离能覆盖 ORM 查询、原生 SQL、事件溯源与缓存等不同路径，减少人为疏漏；与现有基础设施模块天然兼容。
 - **Alternatives considered**:
@@ -22,6 +32,7 @@
   - 仅依赖数据库行级安全策略 → 提升维护复杂度且难以覆盖事件流与缓存，仍需应用层补充。
 
 ## 决策 4：角色-能力注册与发布治理
+
 - **Decision**: 在规范中确立统一的 `RoleCapabilityRegistry` 元数据结构，要求通过配置中心或版本化表格管理角色能力，并与 CASL 能力工厂同步。
 - **Rationale**: 注册中心可让角色策略具备版本与审计能力，方便运维回滚及跨域协同；与现有 `@hl8/config` 流程对齐，易于落地。
 - **Alternatives considered**:
@@ -29,9 +40,9 @@
   - 完全依赖代码常量定义 → 变更需重新发布服务，缺乏运营灵活性。
 
 ## 决策 5：DDD + Clean Architecture + CQRS + ES 混合架构协同
+
 - **Decision**: 规范中必须明确各业务域遵循 DDD 分层（界限上下文、聚合根、领域服务）与 Clean Architecture、CQRS、事件溯源的协作关系，要求命令/查询在执行链路中统一使用租户上下文与权限校验，并通过事件流保持租户分区。
 - **Rationale**: 项目既定架构要求混合模式协同，明确责任边界可减少设计歧义，确保多租户隔离、权限控制、事件驱动在领域模型层面统一落地。
 - **Alternatives considered**:
   - 仅在规范中提醒使用 DDD，但不强制分层描述 → 容易导致领域团队忽略聚合根与事件溯源的协作细节。
   - 允许局部模块按传统三层架构设计 → 隔离与权限校验散落在控制器层，增加越权风险。
-
