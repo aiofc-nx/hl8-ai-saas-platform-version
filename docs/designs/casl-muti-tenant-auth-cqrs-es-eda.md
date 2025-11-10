@@ -1,5 +1,3 @@
-您提出了一个很好的问题。我在上面的文档中确实**没有充分考虑到 CQRS、ES、EDA 的集成**。让我重新制定一个完整的基于 CASL + CQRS + ES + EDA 的多租户认证授权设计规范。
-
 # 基于 CASL + CQRS + ES + EDA 的多租户认证授权全栈设计规范
 
 ## 📋 文档概述
@@ -54,22 +52,30 @@
 ### 2.1 事件溯源的权限聚合根
 
 ```typescript
-// 用户权限聚合根 (事件溯源)
-export class UserAuthorization extends EventSourcedAggregateRoot {
-  private userId: UserId;
-  private tenantId: TenantId;
-  private roles: Map<string, TenantRole> = new Map();
-  private permissions: Map<string, Permission> = new Map();
-  private status: AuthorizationStatus;
-  private version: number = 0;
+import { DateTime } from 'luxon';
 
-  constructor() {
-    super();
+// 用户权限聚合根 (事件溯源 + 多租户 + 审计)
+export class UserAuthorization extends MultiTenantEventSourcedAggregateRoot {
+  private _userId: UserId;
+  private _roles: Map<string, TenantRole> = new Map();
+  private _permissions: Map<string, Permission> = new Map();
+  private _status: AuthorizationStatus = AuthorizationStatus.Enabled;
+
+  private constructor(userId: UserId, tenantId: TenantId) {
+    super(tenantId);
+    this._userId = userId;
   }
 
   // 从事件历史重建
-  static reconstitute(events: DomainEvent[]): UserAuthorization {
-    const aggregate = new UserAuthorization();
+  static reconstitute(events: MultiTenantDomainEvent[]): UserAuthorization {
+    if (events.length === 0) {
+      throw new EmptyEventStreamError('用户权限事件流不能为空');
+    }
+    const first = events[0];
+    const aggregate = new UserAuthorization(
+      UserId.create(first.aggregateId),
+      first.tenantId
+    );
     aggregate.loadFromHistory(events);
     return aggregate;
   }
@@ -81,22 +87,22 @@ export class UserAuthorization extends EventSourcedAggregateRoot {
       throw new AuthorizationError('无权分配该角色');
     }
 
-    if (this.roles.has(command.role.name)) {
+    if (this._roles.has(command.role.name)) {
       return; // 已存在
     }
 
     this.apply(new RoleAssignedEvent(
-      this.userId,
+      this._userId,
       this.tenantId,
       command.role,
       command.assignedBy,
-      new Date()
+      DateTime.now()
     ));
   }
 
   // 撤销角色命令
   revokeRole(command: RevokeRoleCommand): void {
-    if (!this.roles.has(command.roleName)) {
+    if (!this._roles.has(command.roleName)) {
       return;
     }
 
@@ -105,23 +111,23 @@ export class UserAuthorization extends EventSourcedAggregateRoot {
     }
 
     this.apply(new RoleRevokedEvent(
-      this.userId,
+      this._userId,
       this.tenantId,
       command.roleName,
       command.revokedBy,
-      new Date()
+      DateTime.now()
     ));
   }
 
   // 检查权限
   hasPermission(permission: Permission): boolean {
     // 检查直接权限
-    if (this.permissions.has(permission.toString())) {
+    if (this._permissions.has(permission.toString())) {
       return true;
     }
 
     // 检查角色权限
-    for (const role of this.roles.values()) {
+    for (const role of this._roles.values()) {
       if (role.hasPermission(permission)) {
         return true;
       }
@@ -142,12 +148,12 @@ export class UserAuthorization extends EventSourcedAggregateRoot {
     });
 
     // 角色规则
-    for (const role of this.roles.values()) {
+    for (const role of this._roles.values()) {
       rules.push(...role.toCaslRules(this.tenantId));
     }
 
     // 直接权限规则
-    for (const permission of this.permissions.values()) {
+    for (const permission of this._permissions.values()) {
       rules.push(permission.toCaslRule(this.tenantId));
     }
 
@@ -156,23 +162,33 @@ export class UserAuthorization extends EventSourcedAggregateRoot {
 
   // 事件应用器
   private onRoleAssignedEvent(event: RoleAssignedEvent): void {
-    this.roles.set(event.role.name, event.role);
-    this.version++;
+    this.assertTenant(event.tenantId);
+    this._roles.set(event.role.name, event.role);
+    this.touch();
   }
 
   private onRoleRevokedEvent(event: RoleRevokedEvent): void {
-    this.roles.delete(event.roleName);
-    this.version++;
+    this.assertTenant(event.tenantId);
+    this._roles.delete(event.roleName);
+    this.touch();
   }
 
   private onPermissionGrantedEvent(event: PermissionGrantedEvent): void {
-    this.permissions.set(event.permission.toString(), event.permission);
-    this.version++;
+    this.assertTenant(event.tenantId);
+    this._permissions.set(event.permission.toString(), event.permission);
+    this.touch();
   }
 
   private onPermissionRevokedEvent(event: PermissionRevokedEvent): void {
-    this.permissions.delete(event.permission.toString());
-    this.version++;
+    this.assertTenant(event.tenantId);
+    this._permissions.delete(event.permission.toString());
+    this.touch();
+  }
+
+  private assertTenant(tenantId: TenantId): void {
+    if (!this.tenantId.equals(tenantId)) {
+      throw new CrossTenantOperationError('跨租户权限事件被拒绝');
+    }
   }
 }
 ```
@@ -180,44 +196,44 @@ export class UserAuthorization extends EventSourcedAggregateRoot {
 ### 2.2 事件定义的权限领域事件
 
 ```typescript
-// 权限相关领域事件
-export class RoleAssignedEvent extends DomainEvent {
+// 权限相关领域事件（多租户 + DateTime）
+export class RoleAssignedEvent extends MultiTenantDomainEvent {
   constructor(
     public readonly userId: UserId,
     public readonly tenantId: TenantId,
     public readonly role: TenantRole,
     public readonly assignedBy: UserId,
-    public readonly assignedAt: Date
+    public readonly assignedAt: DateTime
   ) {
-    super(userId.value);
+    super(userId.value, tenantId);
   }
 }
 
-export class RoleRevokedEvent extends DomainEvent {
+export class RoleRevokedEvent extends MultiTenantDomainEvent {
   constructor(
     public readonly userId: UserId,
     public readonly tenantId: TenantId,
     public readonly roleName: string,
     public readonly revokedBy: UserId,
-    public readonly revokedAt: Date
+    public readonly revokedAt: DateTime
   ) {
-    super(userId.value);
+    super(userId.value, tenantId);
   }
 }
 
-export class PermissionGrantedEvent extends DomainEvent {
+export class PermissionGrantedEvent extends MultiTenantDomainEvent {
   constructor(
     public readonly userId: UserId,
     public readonly tenantId: TenantId,
     public readonly permission: Permission,
     public readonly grantedBy: UserId,
-    public readonly grantedAt: Date
+    public readonly grantedAt: DateTime
   ) {
-    super(userId.value);
+    super(userId.value, tenantId);
   }
 }
 
-export class AuthorizationStatusChangedEvent extends DomainEvent {
+export class AuthorizationStatusChangedEvent extends MultiTenantDomainEvent {
   constructor(
     public readonly userId: UserId,
     public readonly tenantId: TenantId,
@@ -226,7 +242,7 @@ export class AuthorizationStatusChangedEvent extends DomainEvent {
     public readonly changedBy: UserId,
     public readonly reason: string
   ) {
-    super(userId.value);
+    super(userId.value, tenantId);
   }
 }
 ```
@@ -237,26 +253,33 @@ export class AuthorizationStatusChangedEvent extends DomainEvent {
 
 ```typescript
 // 基础 CASL 命令
-export abstract class CaslCommand implements ICommand {
-  constructor(
-    public readonly securityContext: SecurityContext,
-    public readonly commandId: string = ulid()
-  ) {}
+export abstract class CaslCommand extends MultiTenantCommand {
+  protected constructor(
+    securityContext: SecurityContext,
+    commandId: string = ulid()
+  ) {
+    super(securityContext, commandId);
+  }
 }
 
 // 带权限验证的命令处理器基类
-export abstract class CaslCommandHandler< TCommand extends CaslCommand> 
-  implements ICommandHandler<TCommand> {
-  
+export abstract class CaslCommandHandler<TCommand extends CaslCommand>
+  extends MultiTenantCommandHandler<TCommand> {
+
   constructor(
     protected readonly abilityService: CaslAbilityService,
-    protected readonly eventStore: EventStore,
+    tenantRepository: TenantRepository,
+    eventStore: EventStore,
+    auditService: AuditService,
+    eventBus: EventBus,
     protected readonly commandValidator: CommandValidator
-  ) {}
+  ) {
+    super(abilityService, tenantRepository, eventStore, auditService, eventBus);
+  }
 
   protected async validateCommandPermission(
-    command: TCommand, 
-    action: Action, 
+    command: TCommand,
+    action: Action,
     subject: AppSubject
   ): Promise<void> {
     const ability = await this.abilityService.getAbilityForUser(
@@ -271,20 +294,15 @@ export abstract class CaslCommandHandler< TCommand extends CaslCommand>
     }
   }
 
-  protected async loadAggregate<TAggregate extends EventSourcedAggregateRoot>(
-    aggregateClass: new () => TAggregate,
-    aggregateId: string
+  protected async loadAggregate<
+    TAggregate extends MultiTenantEventSourcedAggregateRoot
+  >(
+    aggregateClass: new (...args: unknown[]) => TAggregate,
+    aggregateId: string,
+    tenantId: TenantId
   ): Promise<TAggregate> {
-    const events = await this.eventStore.getEvents(aggregateId);
+    const events = await this.eventStore.getEvents(aggregateId, tenantId);
     return aggregateClass.reconstitute(events);
-  }
-
-  protected async saveAggregate(
-    aggregate: EventSourcedAggregateRoot
-  ): Promise<void> {
-    const events = aggregate.getUncommittedEvents();
-    await this.eventStore.saveEvents(aggregate.id, events, aggregate.version);
-    aggregate.clearEvents();
   }
 }
 
@@ -293,31 +311,44 @@ export abstract class CaslCommandHandler< TCommand extends CaslCommand>
 export class AssignRoleCommandHandler extends CaslCommandHandler<AssignRoleCommand> {
   constructor(
     abilityService: CaslAbilityService,
+    tenantRepository: TenantRepository,
     eventStore: EventStore,
+    auditService: AuditService,
+    eventBus: EventBus,
     commandValidator: CommandValidator,
     private readonly roleRepository: RoleRepository
   ) {
-    super(abilityService, eventStore, commandValidator);
+    super(
+      abilityService,
+      tenantRepository,
+      eventStore,
+      auditService,
+      eventBus,
+      commandValidator
+    );
   }
 
   async execute(command: AssignRoleCommand): Promise<void> {
-    // 1. 验证命令权限
-    await this.validateCommandPermission(command, 'assign', 'Role');
+    await this.commandValidator.validate(command);
+    await this.validateTenantStatus(command);
 
-    // 2. 加载用户权限聚合
-    const userAuth = await this.loadAggregate(
-      UserAuthorization,
-      `user_auth_${command.userId.value}_${command.tenantId.value}`
+    await this.validateCommandPermission(
+      command,
+      'assign',
+      { __typename: 'TenantRole', name: command.role.name }
     );
 
-    // 3. 执行业务逻辑
+    const userAuth = await this.loadAggregate(
+      UserAuthorization,
+      `user_auth_${command.userId.value}_${command.securityContext.tenantId}`,
+      TenantId.create(command.securityContext.tenantId)
+    );
+
     userAuth.assignRole(command);
 
-    // 4. 保存事件
-    await this.saveAggregate(userAuth);
-
-    // 5. 发布领域事件到事件总线
-    this.eventBus.publishAll(userAuth.getUncommittedEvents());
+    const events = userAuth.getUncommittedEvents();
+    await this.saveMultiTenantAggregate(userAuth);
+    await this.publishMultiTenantEvents(events);
   }
 }
 
@@ -325,6 +356,9 @@ export class AssignRoleCommandHandler extends CaslCommandHandler<AssignRoleComma
 @CommandHandler(CreateOrderCommand)
 export class CreateOrderCommandHandler extends CaslCommandHandler<CreateOrderCommand> {
   async execute(command: CreateOrderCommand): Promise<OrderResult> {
+    await this.commandValidator.validate(command);
+    await this.validateTenantStatus(command);
+
     const ability = await this.abilityService.getAbilityForUser(
       command.securityContext.userId,
       command.securityContext.tenantId
@@ -343,15 +377,20 @@ export class CreateOrderCommandHandler extends CaslCommandHandler<CreateOrderCom
     }
 
     // 加载订单聚合
-    const order = Order.create(command);
+    const order = Order.create(
+      command,
+      TenantId.create(command.securityContext.tenantId),
+      OrganizationId.create(command.organizationId)
+    );
 
     // 验证对创建后订单的权限
     if (!ability.can('read', order)) {
       throw new AuthorizationError('无权访问创建的订单');
     }
 
-    // 保存事件
-    await this.saveAggregate(order);
+    const events = order.getUncommittedEvents();
+    await this.saveMultiTenantAggregate(order);
+    await this.publishMultiTenantEvents(events);
 
     return OrderResult.from(order);
   }
@@ -447,8 +486,14 @@ export class GetOrdersQueryHandler extends CaslQueryHandler<GetOrdersQuery, Orde
     );
 
     // 执行查询
-    return this.orderRepository.findByTenant(
-      TenantId.create(query.securityContext.tenantId),
+    const tenantId = TenantId.create(query.securityContext.tenantId);
+    const organizationId = OrganizationId.create(query.organizationId);
+    const departmentIds = (query.departmentIds ?? []).map(DepartmentId.create);
+
+    return this.orderRepository.findByTenantAndOrganization(
+      tenantId,
+      organizationId,
+      departmentIds,
       {
         ...query.filters,
         ...caslConditions
@@ -458,6 +503,13 @@ export class GetOrdersQueryHandler extends CaslQueryHandler<GetOrdersQuery, Orde
   }
 }
 ```
+
+### 3.3 多层级数据隔离策略
+
+- **租户级**：所有命令/查询继承 `MultiTenantCommand` / `MultiTenantQuery`，在构造期校验 `tenantId`；处理器通过 `validateTenantStatus` 保障租户有效。
+- **组织级**：命令与查询都需显式传入 `organizationId`，仓储接口（如 `findByTenantAndOrganization`）自动拼接 `tenantId + organizationId` 过滤条件。
+- **部门级**：在需要的场景下追加 `departmentIds`，以 `DepartmentId` 值对象传递至仓储或 CASL 规则中实现最小权限控制。
+- **审计联动**：命令处理器统一使用 `saveMultiTenantAggregate` + `publishMultiTenantEvents`，自动记录 `createdAt`/`updatedAt`/`deletedAt` 变更与权限事件。
 
 ## 🔄 事件驱动架构 (EDA 集成)
 
@@ -470,7 +522,9 @@ export class RoleAssignedEventHandler implements IEventHandler<RoleAssignedEvent
   constructor(
     private readonly abilityService: CaslAbilityService,
     private readonly cacheService: CacheService,
-    private readonly logger: Logger
+    private readonly eventBus: EventBus,
+    @InjectLogger(RoleAssignedEventHandler.name)
+    private readonly logger: AppLoggerService
   ) {}
 
   async handle(event: RoleAssignedEvent): Promise<void> {
@@ -492,10 +546,17 @@ export class RoleAssignedEventHandler implements IEventHandler<RoleAssignedEvent
         { role: event.role.name }
       ));
 
-      this.logger.log(`Role assigned event processed for user ${event.userId.value}`);
+      this.logger.info('角色分配事件处理完成', {
+        userId: event.userId.value,
+        tenantId: event.tenantId.value
+      });
 
     } catch (error) {
-      this.logger.error(`Failed to process role assigned event: ${error.message}`, error.stack);
+      this.logger.error('角色分配事件处理失败', {
+        userId: event.userId.value,
+        tenantId: event.tenantId.value,
+        error: error instanceof Error ? error.message : error
+      });
       // 重试机制或死信队列处理
     }
   }
@@ -513,7 +574,12 @@ export class RoleAssignedEventHandler implements IEventHandler<RoleAssignedEvent
 // 权限变更 Saga (复杂业务流程)
 @Injectable()
 export class PermissionChangeSaga extends Saga {
-  private readonly logger = new Logger(PermissionChangeSaga.name);
+  constructor(
+    @InjectLogger(PermissionChangeSaga.name)
+    private readonly logger: AppLoggerService
+  ) {
+    super();
+  }
 
   @SagaEventHandler(RoleAssignedEvent)
   async onRoleAssigned(event: RoleAssignedEvent): Promise<void> {

@@ -21,6 +21,11 @@
 - **租户数据隔离**: API响应自动过滤租户数据
 - **租户特定配置**: 支持租户自定义的API行为和限制
 
+### 1.3 示例约定
+
+- **✅ 可直接落地示例**：包含完整依赖注入、装饰器与 Nest 组件声明，可直接复制使用。
+- **⚠️ 伪代码示意**：用于说明流程或概念的代码段，可能省略底层实现或上下文配置，文内会显式标注。
+
 ## 🏗 多租户接口层结构
 
 ### 2.1 分层与职责 (多租户增强)
@@ -53,7 +58,7 @@ interfaces/
 ```typescript
 // 多租户控制器基类
 export abstract class MultiTenantController {
-  protected readonly logger = new Logger(this.constructor.name);
+  protected readonly logger = InjectLogger(this.constructor.name); // 来源: @hl8/logger
 
   // 获取当前租户上下文
   protected getCurrentTenantContext(@TenantContext() context: TenantContext): TenantContext {
@@ -276,6 +281,10 @@ export class DepartmentController extends MultiTenantController {
 }
 ```
 
+> 数据隔离提示：接口层需确保请求路径和上下文中的 `tenantId`、`organizationId`、`departmentId` 一致。例如：
+> - 解析路由参数后，结合 `TenantContext` 构造 `SecurityContext`，确保命令/查询在应用层执行前即可校验租户级隔离。
+> - 在 `DepartmentController` 中，`organizationId` 与 `tenantContext` 同时传递给命令，底层处理器会再次校验组织归属，形成租户 → 组织 → 部门三级防线。
+
 ### 3.2 多租户 DTO 设计规范
 
 ```typescript
@@ -447,7 +456,7 @@ export abstract class MultiTenantAssembler {
 export class OrganizationAssembler extends MultiTenantAssembler {
   constructor(
     private readonly validationService: ValidationService,
-    private readonly logger: Logger
+    private readonly logger: AppLoggerService /* 来源: @hl8/logger */
   ) {
     super();
   }
@@ -641,7 +650,7 @@ export class MultiTenantAuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly tenantIdentificationService: TenantIdentificationService,
     private readonly jwtService: JwtService,
-    private readonly logger: Logger
+    private readonly logger: AppLoggerService /* 来源: @hl8/logger */
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -807,7 +816,8 @@ export class SuperAdminGuard implements CanActivate {
 export class TenantIdentificationService {
   constructor(
     private readonly tenantRepository: TenantRepository,
-    private readonly logger: Logger
+    private readonly jwtService: JwtService,
+    private readonly logger: AppLoggerService /* 来源: @hl8/logger */
   ) {}
 
   async identifyTenant(request: Request): Promise<TenantContext> {
@@ -870,8 +880,9 @@ export class TenantIdentificationService {
 
   private decodeToken(token: string): any {
     try {
-      return jwt.decode(token);
-    } catch {
+      return this.jwtService.decode(token); // ✅ 使用 @hl8/jwt 提供的统一服务
+    } catch (error) {
+      this.logger.warn('JWT 解码失败', error);
       return null;
     }
   }
@@ -883,7 +894,7 @@ export class TenantIdentificationService {
 ```typescript
 @Catch()
 export class MultiTenantExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(MultiTenantExceptionFilter.name);
+  private readonly logger = InjectLogger(MultiTenantExceptionFilter.name); // 来源: @hl8/logger
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -980,7 +991,7 @@ export class MultiTenantExceptionFilter implements ExceptionFilter {
 ```typescript
 @Injectable()
 export class MultiTenantLoggingInterceptor implements NestInterceptor {
-  private readonly logger = new Logger(MultiTenantLoggingInterceptor.name);
+  private readonly logger = InjectLogger(MultiTenantLoggingInterceptor.name); // 来源: @hl8/logger
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
@@ -1842,7 +1853,7 @@ spec:
 export class MultiTenantCacheService {
   constructor(
     private readonly redisService: RedisService,
-    private readonly logger: Logger
+    private readonly logger: AppLoggerService /* 来源: @hl8/logger */
   ) {}
 
   // 租户级别的缓存键生成
@@ -1926,7 +1937,7 @@ export class MultiTenantDatabaseService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly logger: Logger
+    private readonly logger: AppLoggerService /* 来源: @hl8/logger */
   ) {
     this.sharedConnection = this.createSharedConnection();
   }
@@ -2015,7 +2026,7 @@ export class MultiTenantDatabaseService {
 export class MultiTenantMonitoringService {
   constructor(
     private readonly metricsService: MetricsService,
-    private readonly logger: Logger
+    private readonly logger: AppLoggerService /* 来源: @hl8/logger */
   ) {}
 
   // 租户级别的API指标

@@ -21,6 +21,44 @@
 - **租户上下文**: 显式传递租户信息，避免隐式依赖
 - **超级租户**: 支持系统级管理租户的特殊权限
 
+### 1.3 示例约定
+
+- **✅ 可直接落地示例**：完整呈现聚合、值对象、领域事件等实现细节，可直接用于项目。
+- **⚠️ 伪代码示意**：用于解释概念的片段，不含全部依赖或上下文，文内会显式标注，应由读者在应用层或领域服务中补齐。
+
+### 1.4 标识（ID）统一规范
+
+- **唯一格式**：所有领域实体与聚合根 ID 必须使用 **UUID v4** 生成，确保在多租户并发场景下具备全局唯一性。
+- **值对象守护**：各类 `*Id` 值对象负责格式校验与比对逻辑，禁止领域层直接操作裸字符串。
+- **生成方式**：依赖 Node.js `crypto.randomUUID()` 或 `uuid` 库的 v4 生成器，由值对象封装，统一管理。
+
+```typescript
+// ✅ 可直接落地示例：基于 UUID v4 的 ID 值对象
+import { randomUUID } from 'crypto';
+
+export abstract class UuidIdentity<TIdentity extends string> {
+  protected constructor(public readonly value: TIdentity) {
+    if (!/^[0-9a-fA-F-]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(value)) {
+      throw new InvalidIdentityError('ID 必须符合 UUID v4 格式');
+    }
+  }
+
+  protected static generate(): string {
+    return randomUUID();
+  }
+
+  equals(other: UuidIdentity<TIdentity>): boolean {
+    return this.value === other.value;
+  }
+}
+
+export class TenantId extends UuidIdentity<string> {
+  static create(value: string = this.generate()): TenantId {
+    return new TenantId(value);
+  }
+}
+```
+
 ## 🏗 多租户领域模型结构
 
 ### 2.1 分层与职责 (多租户增强)
@@ -57,17 +95,51 @@ domain/
 ### 3.1 多租户聚合根基类
 
 ```typescript
-// 多租户聚合根基类
+// 多租户聚合根基类（内置审计字段）
+import { DateTime } from 'luxon';
+
 export abstract class MultiTenantAggregateRoot extends AggregateRoot {
   protected _tenantId: TenantId;
+  protected _createdAt: DateTime;
+  protected _updatedAt: DateTime;
+  protected _deletedAt: DateTime | null = null;
 
-  constructor(tenantId: TenantId) {
+  constructor(tenantId: TenantId, createdAt: DateTime = DateTime.now()) {
     super();
     this._tenantId = tenantId;
+    this._createdAt = createdAt;
+    this._updatedAt = createdAt;
   }
 
   public get tenantId(): TenantId {
     return this._tenantId;
+  }
+
+  public get createdAt(): DateTime {
+    return this._createdAt;
+  }
+
+  public get updatedAt(): DateTime {
+    return this._updatedAt;
+  }
+
+  public get deletedAt(): DateTime | null {
+    return this._deletedAt;
+  }
+
+  public get isDeleted(): boolean {
+    return this._deletedAt !== null;
+  }
+
+  protected touch(): void {
+    this._updatedAt = DateTime.now();
+  }
+
+  protected softDelete(): void {
+    if (!this._deletedAt) {
+      this._deletedAt = DateTime.now();
+      this.touch();
+    }
   }
 
   // 租户相等性检查
@@ -128,19 +200,28 @@ export class Tenant extends MultiTenantAggregateRoot {
     }
 
     this._status = TenantStatus.ACTIVE;
+    this.touch();
     this.addDomainEvent(new TenantActivatedEvent(this.id));
   }
 
   // 停用租户
   public deactivate(reason: string): void {
     this._status = TenantStatus.SUSPENDED;
+    this.touch();
     this.addDomainEvent(new TenantDeactivatedEvent(this.id, reason));
   }
 
   // 更新配置
   public updateConfig(config: Partial<TenantConfig>): void {
     this._config = this._config.merge(config);
+    this.touch();
     this.addDomainEvent(new TenantConfigUpdatedEvent(this.id, this._config));
+  }
+
+  // 归档租户（软删除）
+  public archive(reason: string): void {
+    this.softDelete();
+    this.addDomainEvent(new TenantArchivedEvent(this.id, reason));
   }
 
   // 业务验证
@@ -207,7 +288,7 @@ export class Organization extends MultiTenantAggregateRoot {
   }
 
   // 创建部门
-  public createDepartment(creation: DepartmentCreation): Department {
+  public createDepartment(creation: DepartmentCreation & { parentDepartment?: Department }): Department {
     // 验证操作权限
     if (!this.canCreateDepartments()) {
       throw new OrganizationOperationError('无权在组织中创建部门');
@@ -216,10 +297,12 @@ export class Organization extends MultiTenantAggregateRoot {
     const department = Department.create({
       ...creation,
       organizationId: this.id,
-      tenantId: this.tenantId
+      tenantId: this.tenantId,
+      parentDepartment: creation.parentDepartment
     });
 
     this._departments.push(department);
+    this.touch();
     return department;
   }
 
@@ -231,6 +314,13 @@ export class Organization extends MultiTenantAggregateRoot {
     this._departments.forEach(dept => dept.deactivate());
     
     this.addDomainEvent(new OrganizationDeactivatedEvent(this.id, this.tenantId));
+    this.touch();
+  }
+
+  // 归档组织（软删除）
+  public archive(): void {
+    this.softDelete();
+    this.addDomainEvent(new OrganizationArchivedEvent(this.id, this.tenantId));
   }
 
   // 验证组织操作权限
@@ -289,19 +379,20 @@ export class Department extends MultiTenantAggregateRoot {
     this.validate();
   }
 
-  public static create(creation: DepartmentCreation): Department {
-    const path = creation.parentId ? 
-      DepartmentPath.createChild(creation.parentId) : 
+  public static create(creation: DepartmentCreation & { parentDepartment?: Department }): Department {
+    // ⚠️ 伪代码：如需根据 ID 查询父部门，应在应用层或领域服务中先加载并传入 parentDepartment。
+    const path = creation.parentDepartment ? 
+      creation.parentDepartment.path.createChildPath(creation.parentDepartment.id) : 
       DepartmentPath.root();
     
-    const level = creation.parentId ? 
-      await this.calculateLevel(creation.parentId) + 1 : 0;
+    const level = creation.parentDepartment ? 
+      creation.parentDepartment.level + 1 : 0;
 
     const department = new Department(
       DepartmentId.create(),
       creation.tenantId,
       creation.organizationId,
-      creation.parentId || null,
+      creation.parentDepartment ? creation.parentDepartment.id : null,
       creation.name,
       creation.code,
       path,
@@ -322,12 +413,15 @@ export class Department extends MultiTenantAggregateRoot {
       throw new DepartmentOperationError('无权创建子部门');
     }
 
-    return Department.create({
+    const subDepartment = Department.create({
       ...creation,
       organizationId: this._organizationId,
       tenantId: this.tenantId,
-      parentId: this.id
+      parentDepartment: this
     });
+
+    this.touch();
+    return subDepartment;
   }
 
   // 移动部门
@@ -351,6 +445,7 @@ export class Department extends MultiTenantAggregateRoot {
     this._parentDepartmentId = newParent.id;
     this._path = newPath;
     this._level = newParent.level + 1;
+    this.touch();
 
     this.addDomainEvent(new DepartmentMovedEvent(
       this.id,
@@ -365,13 +460,20 @@ export class Department extends MultiTenantAggregateRoot {
     this._status = DepartmentStatus.INACTIVE;
     
     // 递归停用子部门
-    const descendants = await this.getDescendants();
+    const descendants = this.getDescendants();
     descendants.forEach(dept => dept.deactivate());
     
     this.addDomainEvent(new DepartmentDeactivatedEvent(
       this.id,
       this.tenantId
     ));
+    this.touch();
+  }
+
+  // 归档部门（软删除）
+  public archive(): void {
+    this.softDelete();
+    this.addDomainEvent(new DepartmentArchivedEvent(this.id, this.tenantId, this.organizationId));
   }
 
   private canCreateSubDepartments(): boolean {
@@ -435,9 +537,8 @@ export class UserOrganizationAuthorization extends MultiTenantAggregateRoot {
   }
 
   // 加入部门
-  public async joinDepartment(command: JoinDepartmentCommand): Promise<void> {
+  public joinDepartment(command: JoinDepartmentCommand, department: Department): void {
     // 验证用户是否在父组织中
-    const department = await this.departmentRepository.findById(command.departmentId);
     if (!this._organizationMemberships.has(department.organizationId.value)) {
       throw new AuthorizationError('用户不在该部门所属的组织中');
     }
@@ -447,17 +548,17 @@ export class UserOrganizationAuthorization extends MultiTenantAggregateRoot {
       throw new AuthorizationError('无权管理部门成员');
     }
 
-    const membership = DepartmentMembership.create(
-      this._userId,
-      command.departmentId,
-      command.roles
-    );
+    const membership = DepartmentMembership.create({
+      userId: this._userId,
+      departmentId: department.id,
+      roles: command.roles
+    });
 
-    this._departmentMemberships.set(command.departmentId.value, membership);
+    this._departmentMemberships.set(department.id.value, membership);
     
     this.addDomainEvent(new UserJoinedDepartmentEvent(
       this._userId,
-      command.departmentId,
+      department.id,
       this.tenantId,
       command.roles,
       command.operatedBy
@@ -471,11 +572,13 @@ export class UserOrganizationAuthorization extends MultiTenantAggregateRoot {
   }
 
   // 检查部门权限 (包括继承)
-  public async hasDepartmentPermission(departmentId: DepartmentId, permission: Permission): Promise<boolean> {
-    const department = await this.departmentRepository.findById(departmentId);
-    
+  public hasDepartmentPermission(
+    department: Department,
+    permission: Permission,
+    ancestorDepartments: Department[] = []
+  ): boolean {
     // 检查直接权限
-    const directMembership = this._departmentMemberships.get(departmentId.value);
+    const directMembership = this._departmentMemberships.get(department.id.value);
     if (directMembership?.hasPermission(permission)) {
       return true;
     }
@@ -486,8 +589,7 @@ export class UserOrganizationAuthorization extends MultiTenantAggregateRoot {
     }
 
     // 检查上级部门权限继承
-    const ancestors = await department.getAncestors();
-    for (const ancestor of ancestors) {
+    for (const ancestor of ancestorDepartments) {
       const ancestorMembership = this._departmentMemberships.get(ancestor.id.value);
       if (ancestorMembership?.canInheritToDescendants(permission)) {
         return true;
@@ -515,6 +617,13 @@ export class UserOrganizationAuthorization extends MultiTenantAggregateRoot {
   }
 }
 ```
+
+### 3.5 多层次数据隔离策略（租户 → 组织 → 部门）
+
+- **租户级隔离**：所有聚合根继承 `MultiTenantAggregateRoot`，任何状态变更前必须校验 `tenantId` 一致性（参见 `ensureSameTenant`）。聚合内的实体、事件均携带租户上下文。
+- **组织级隔离**：`Organization` 聚合在构造与行为中强制绑定 `tenantId`，并在 `createDepartment` 时把同一租户的组织 ID 传递给部门，避免跨组织/跨租户访问。
+- **部门级隔离**：`Department` 聚合同时维护 `tenantId` 与 `organizationId`，在移动、停用、归档等操作中校验父级与租户一致性；部门路径 `DepartmentPath` 组合了租户 + 组织 + 部门层级信息，用于精准过滤。
+- **应用层配合**：命令/查询基类会在执行前再次校验多层次上下文（见《应用层设计规范》），确保 API 调用无法越过任一隔离层。
 
 ## 🎪 多租户领域服务规范
 
@@ -679,8 +788,53 @@ export class TenantCreatedEvent extends MultiTenantDomainEvent {
   }
 }
 
+export class TenantActivatedEvent extends MultiTenantDomainEvent {
+  constructor(tenantId: TenantId) {
+    super(tenantId.value, tenantId);
+  }
+}
+
+export class TenantDeactivatedEvent extends MultiTenantDomainEvent {
+  constructor(tenantId: TenantId, public readonly reason: string) {
+    super(tenantId.value, tenantId);
+  }
+}
+
+export class TenantConfigUpdatedEvent extends MultiTenantDomainEvent {
+  constructor(tenantId: TenantId, public readonly config: TenantConfig) {
+    super(tenantId.value, tenantId);
+  }
+}
+
+export class TenantArchivedEvent extends MultiTenantDomainEvent {
+  constructor(
+    tenantId: TenantId,
+    public readonly reason: string
+  ) {
+    super(tenantId.value, tenantId);
+  }
+}
+
 // 组织创建事件
 export class OrganizationCreatedEvent extends MultiTenantDomainEvent {
+  constructor(
+    organizationId: OrganizationId,
+    tenantId: TenantId
+  ) {
+    super(organizationId.value, tenantId);
+  }
+}
+
+export class OrganizationDeactivatedEvent extends MultiTenantDomainEvent {
+  constructor(
+    organizationId: OrganizationId,
+    tenantId: TenantId
+  ) {
+    super(organizationId.value, tenantId);
+  }
+}
+
+export class OrganizationArchivedEvent extends MultiTenantDomainEvent {
   constructor(
     organizationId: OrganizationId,
     tenantId: TenantId
@@ -709,6 +863,25 @@ export class DepartmentMovedEvent extends MultiTenantDomainEvent {
     tenantId: TenantId,
     public readonly oldPath: DepartmentPath,
     public readonly newPath: DepartmentPath
+  ) {
+    super(departmentId.value, tenantId);
+  }
+}
+
+export class DepartmentDeactivatedEvent extends MultiTenantDomainEvent {
+  constructor(
+    departmentId: DepartmentId,
+    tenantId: TenantId
+  ) {
+    super(departmentId.value, tenantId);
+  }
+}
+
+export class DepartmentArchivedEvent extends MultiTenantDomainEvent {
+  constructor(
+    departmentId: DepartmentId,
+    tenantId: TenantId,
+    public readonly organizationId: OrganizationId
   ) {
     super(departmentId.value, tenantId);
   }
@@ -1014,6 +1187,8 @@ export abstract class MultiTenantEventSourcedAggregateRoot extends MultiTenantAg
 - **租户上下文事件**: 领域事件携带完整的租户信息
 - **层级数据权限**: 支持组织-部门层级的权限继承
 - **超级租户支持**: 系统级管理租户的特殊权限
+- **全链路审计**: 聚合根内建 `createdAt`、`updatedAt`、`deletedAt` 字段，软删除通过领域事件追踪
+- **多层隔离落地**: 通过 Tenant → Organization → Department 的多级校验与索引，实现租户、组织、部门三级边界约束
 
 ### 9.3 合规性保证
 

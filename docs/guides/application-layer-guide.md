@@ -21,6 +21,11 @@
 - **跨租户权限控制**: 严格验证跨租户操作权限
 - **租户特定业务逻辑**: 支持租户自定义的业务规则
 
+### 1.3 示例约定
+
+- **✅ 可直接落地示例**：完整展示依赖注入、类型声明与关键实现，可直接复制到项目中使用。
+- **⚠️ 伪代码示意**：用于阐述概念的片段，缺省基础设施实现或上下文，文内会显式标注并指向需要补充的部分。
+
 ## 🏗 多租户架构实现规范
 
 ### 2.1 多租户技术实现形式
@@ -75,6 +80,13 @@ src/
             ├── casl/               # CASL 能力服务
             └── guards/             # 多租户守卫
 ```
+
+### 2.3 多层次数据隔离执行业务流程
+
+- **租户级**：所有命令/查询基类在构造时校验 `securityContext.tenantId`，并在处理器中调用 `validateTenantStatus` 确认租户有效。
+- **组织级**：涉及组织的命令（如 `CreateDepartmentCommand`）在执行前必须调用 `organizationRepository.findById`，确保目标组织隶属当前租户。
+- **部门级**：部门相关命令需要同时校验部门所属组织与租户；查询处理器通过 `applyTenantFilter` + `organizationId`/`departmentId` 组合过滤，防止多级越权。
+- **审计追踪**：命令处理器在 `saveMultiTenantAggregate` 内统一记录 `createdAt`/`updatedAt`/`deletedAt` 变更，结合审计服务 `AuditService` 形成完整轨迹。
 
 ## 💻 多租户技术实现模式
 
@@ -143,7 +155,8 @@ export abstract class MultiTenantCommandHandler<TCommand extends MultiTenantComm
     protected readonly abilityService: CaslAbilityService,
     protected readonly tenantRepository: TenantRepository,
     protected readonly eventStore: EventStore,
-    protected readonly auditService: AuditService
+    protected readonly auditService: AuditService,
+    protected readonly eventBus: EventBus
   ) {}
 
   // 租户权限验证
@@ -352,9 +365,10 @@ export class CreateOrganizationHandler extends MultiTenantCommandHandler<CreateO
     tenantRepository: TenantRepository,
     eventStore: EventStore,
     auditService: AuditService,
+    eventBus: EventBus,
     private readonly organizationRepository: OrganizationRepository
   ) {
-    super(abilityService, tenantRepository, eventStore, auditService);
+    super(abilityService, tenantRepository, eventStore, auditService, eventBus);
   }
 
   async execute(command: CreateOrganizationCommand): Promise<OrganizationId> {
@@ -391,6 +405,18 @@ export class CreateOrganizationHandler extends MultiTenantCommandHandler<CreateO
 // 创建部门命令处理器
 @CommandHandler(CreateDepartmentCommand)
 export class CreateDepartmentHandler extends MultiTenantCommandHandler<CreateDepartmentCommand> {
+  constructor(
+    abilityService: CaslAbilityService,
+    tenantRepository: TenantRepository,
+    eventStore: EventStore,
+    auditService: AuditService,
+    eventBus: EventBus,
+    private readonly organizationRepository: OrganizationRepository,
+    private readonly departmentRepository: DepartmentRepository
+  ) {
+    super(abilityService, tenantRepository, eventStore, auditService, eventBus);
+  }
+
   async execute(command: CreateDepartmentCommand): Promise<DepartmentId> {
     // 验证租户状态
     await this.validateTenantStatus(command);
@@ -776,7 +802,9 @@ describe('CreateOrganizationHandler (Multi-tenant)', () => {
     );
 
     mockTenantRepo.findById.mockResolvedValue(tenant);
-    mockAbilityService.checkPermission.mockResolvedValue(true);
+    mockAbilityService.getAbilityForUser.mockResolvedValue({
+      can: () => true
+    });
 
     // When
     const organizationId = await handler.execute(command);

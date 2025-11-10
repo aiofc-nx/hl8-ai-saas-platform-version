@@ -21,6 +21,11 @@
 - **租户配置管理**: 租户特定的技术配置
 - **跨租户运维**: 系统级管理租户的技术设施
 
+### 1.3 示例约定
+
+- **✅ 可直接落地示例**：完整展示依赖注入、类型与初始化方式，可直接复制到工程中。
+- **⚠️ 伪代码示意**：强调概念或流程的片段，不含全部依赖/配置，需结合项目上下文补齐。
+
 ## 🏗 多租户基础设施层结构
 
 ### 2.1 分层与职责 (多租户增强)
@@ -49,18 +54,18 @@ infrastructure/
 ### 3.1 多租户仓储实现
 
 ```typescript
-// 多租户仓储基类
-export abstract class MultiTenantRepository<T extends MultiTenantAggregateRoot> 
-  implements MultiTenantRepository<T> {
+// 多租户仓储基类（命名为 BaseMultiTenantRepository 以避免与接口冲突）
+export abstract class BaseMultiTenantRepository<TAggregate extends MultiTenantAggregateRoot> 
+  implements MultiTenantRepository<TAggregate> {
   
   constructor(
     protected readonly em: EntityManager,
-    protected readonly mapper: EntityMapper<T>,
+    protected readonly mapper: EntityMapper<TAggregate>,
     protected readonly tenantContext: TenantContext,
-    protected readonly logger: Logger
+    protected readonly logger: AppLoggerService /* 来源: @hl8/logger */
   ) {}
 
-  async findById(id: string, tenantId: TenantId): Promise<T | null> {
+  async findById(id: string, tenantId: TenantId): Promise<TAggregate | null> {
     await this.validateTenantAccess(tenantId);
     
     try {
@@ -77,7 +82,7 @@ export abstract class MultiTenantRepository<T extends MultiTenantAggregateRoot>
     }
   }
 
-  async findAll(tenantId: TenantId, criteria?: any): Promise<T[]> {
+  async findAll(tenantId: TenantId, criteria?: any): Promise<TAggregate[]> {
     await this.validateTenantAccess(tenantId);
 
     const where = {
@@ -92,7 +97,7 @@ export abstract class MultiTenantRepository<T extends MultiTenantAggregateRoot>
     return Promise.all(entities.map(entity => this.mapper.toDomain(entity)));
   }
 
-  async save(aggregate: T): Promise<void> {
+  async save(aggregate: TAggregate): Promise<void> {
     await this.validateTenantAccess(aggregate.tenantId);
 
     await this.em.transactional(async (em) => {
@@ -108,7 +113,7 @@ export abstract class MultiTenantRepository<T extends MultiTenantAggregateRoot>
     });
   }
 
-  async delete(aggregate: T): Promise<void> {
+  async delete(aggregate: TAggregate): Promise<void> {
     await this.validateTenantAccess(aggregate.tenantId);
     await this.em.nativeDelete(this.getEntityClass(), aggregate.id.value);
   }
@@ -135,14 +140,14 @@ export abstract class MultiTenantRepository<T extends MultiTenantAggregateRoot>
 // 多租户组织仓储实现
 @Repository(Organization)
 export class MikroOrmOrganizationRepository 
-  extends MultiTenantRepository<Organization> 
+  extends BaseMultiTenantRepository<Organization> 
   implements OrganizationRepository {
   
   constructor(
     em: EntityManager,
     mapper: OrganizationMapper,
     tenantContext: TenantContext,
-    logger: Logger
+    logger: AppLoggerService
   ) {
     super(em, mapper, tenantContext, logger);
   }
@@ -196,6 +201,8 @@ export class MikroOrmOrganizationRepository
 }
 ```
 
+> 注：文中 `AppLoggerService` 由 `@hl8/logger` 提供，负责统一的结构化日志输出；测试环境可通过 `@hl8/logger/testing` 提供的 `createMock<AppLoggerService>()` 生成替身。
+
 ### 3.2 多租户数据库实体
 
 ```typescript
@@ -219,6 +226,8 @@ export abstract class MultiTenantEntity {
   @Property({ version: true })
   version!: number;
 }
+
+// 领域 ID 提醒：所有持久化实体 ID 均采用 PostgreSQL `uuid` 类型，需与领域层 UUID v4 值对象保持一致。
 
 // 租户实体
 @Entity({ tableName: 'tenants' })
@@ -345,12 +354,14 @@ export class EventEntity extends MultiTenantEntity {
 }
 ```
 
+> 多层次隔离说明：所有实体均显式携带 `tenantId`。`OrganizationEntity` 通过 `tenantId + code` 的唯一约束与 `tenantId` 索引落实现租户级隔离；`DepartmentEntity` 额外持有 `organizationId`、`parentDepartmentId`、`path` 等字段，并建立 `tenantId + path` 唯一键与多列索引，以保障“租户 → 组织 → 部门”三级过滤的性能与安全边界。
+
 ### 3.3 多租户对象映射器
 
 ```typescript
 // 多租户映射器基类
 export abstract class MultiTenantMapper<TDomain extends MultiTenantAggregateRoot, TEntity extends MultiTenantEntity> {
-  constructor(protected readonly logger: Logger) {}
+  constructor(protected readonly logger: AppLoggerService /* 来源: @hl8/logger */) {}
 
   abstract toDomain(entity: TEntity): TDomain;
   abstract toPersistence(domain: TDomain): TEntity;
@@ -491,10 +502,23 @@ export class MultiTenantMikroORMConfig {
 @Injectable()
 export class TenantConnectionManager {
   private readonly tenantConnections = new Map<string, EntityManager>();
-  private readonly baseORM: MikroORM;
+  private baseORM!: MikroORM;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly logger: AppLoggerService
+  ) {}
+
+  /**
+   * ✅ 可直接落地示例：在模块初始化阶段调用，用于建立基础 ORM 连接。
+   */
+  async initialize(): Promise<void> {
+    if (this.baseORM) {
+      return;
+    }
+
     this.baseORM = await MikroORM.init(MultiTenantMikroORMConfig.createDefaultConfig());
+    this.logger.info('TenantConnectionManager 初始化完成');
   }
 
   async getEntityManager(tenantId: TenantId): Promise<EntityManager> {
@@ -502,6 +526,10 @@ export class TenantConnectionManager {
     
     if (this.tenantConnections.has(tenantKey)) {
       return this.tenantConnections.get(tenantKey)!;
+    }
+
+    if (!this.baseORM) {
+      throw new Error('TenantConnectionManager 尚未初始化，需先调用 initialize()');
     }
 
     // 创建租户特定的 EntityManager
@@ -542,7 +570,7 @@ export class MultiTenantEventStore implements DomainEventStore {
   constructor(
     private readonly connectionManager: TenantConnectionManager,
     private readonly eventSerializer: EventSerializer,
-    private readonly logger: Logger
+    private readonly logger: AppLoggerService /* 来源: @hl8/logger */
   ) {}
 
   async saveEvents(aggregateId: string, events: MultiTenantDomainEvent[]): Promise<void> {
@@ -833,11 +861,13 @@ describe('MikroOrmOrganizationRepository (Multi-tenant)', () => {
       code: 'TENANT_A_ORG'
     });
 
+    const logger = createMock<AppLoggerService>(); // 来自 @hl8/logger/testing
+
     const repositoryA = new MikroOrmOrganizationRepository(
       await connectionManager.getEntityManager(tenantA.id),
       new OrganizationMapper(),
       new TenantContext(tenantA.id),
-      new Logger()
+      logger
     );
 
     await repositoryA.save(orgA);
@@ -847,7 +877,7 @@ describe('MikroOrmOrganizationRepository (Multi-tenant)', () => {
       await connectionManager.getEntityManager(tenantB.id),
       new OrganizationMapper(),
       new TenantContext(tenantB.id),
-      new Logger()
+      logger
     );
 
     const orgFromTenantB = await repositoryB.findById(orgA.id.value, tenantB.id);
@@ -862,7 +892,7 @@ describe('MikroOrmOrganizationRepository (Multi-tenant)', () => {
       await connectionManager.getEntityManager(tenantA.id),
       new OrganizationMapper(),
       new TenantContext(tenantA.id),
-      new Logger()
+      logger
     );
 
     // When & Then - 尝试用租户A的仓储访问租户B的数据应该失败

@@ -2,7 +2,16 @@
 
 ## 📋 项目概述
 
-基于 CASL + CQRS + ES + EDA 的多租户组织权限 IAM 系统，提供完整的身份认证和访问控制解决方案。
+基于 CASL + CQRS + ES + EDA 的多租户组织权限 IAM 系统，提供完整的身份认证和访问控制解决方案。所有设计须与 `docs/guides/*.md` 的多租户规范及宪章要求保持一致，特别是日志、审计、命令/查询基类与多层数据隔离。
+
+### 0.1 关键设计目标
+
+- **多层隔离**：租户 → 组织 → 部门三级上下文，在命令、查询、仓储、日志审计中全链路透传。
+- **多协议认证**：用户名密码、SAML、OAuth2、OIDC，可扩展 SSO/外部身份源。
+- **统一授权模型**：基于 CASL 的角色/策略/资源建模，并与 CQRS/ES/EDA 事件流保持一致。
+- **全链路审计**：所有关键行为写入审计总线，聚合根维护 `createdAt`/`updatedAt`/`deletedAt` 字段。
+- **高可用与多活**：支持水平扩展、容灾、灰度发布。
+- **生态扩展**：开放插件接口接入企业微信、钉钉、AD 等外部身份源。
 
 ## 1. 基于 Clean Architecture 的代码组织结构
 
@@ -118,39 +127,53 @@ src/
 │       └── cli/
 │           ├── commands/              # 命令
 │           └── questions/             # 交互问题
-├── infrastructure/
-│   ├── persistence/
-│   │   ├── entities/                  # 数据库实体
-│   │   ├── repositories/              # 仓储实现
-│   │   ├── mappers/                   # 对象映射器
-│   │   ├── migrations/                # 数据库迁移
-│   │   └── seeders/                   # 数据种子
-│   ├── external-services/
-│   │   ├── email-service/             # 邮件服务
-│   │   ├── sms-service/               # 短信服务
-│   │   └── sso-providers/             # SSO 提供商
-│   ├── message-brokers/
-│   │   ├── rabbitmq/                  # RabbitMQ
-│   │   ├── redis/                     # Redis
-│   │   └── kafka/                     # Kafka
-│   └── security/
-│       ├── casl/                      # CASL 实现
-│       ├── jwt/                       # JWT 实现
-│       ├── encryption/                # 加密服务
-│       └── audit/                     # 审计服务
-└── shared/
-    ├── kernel/
-    │   ├── base/                      # 基础类
-    │   ├── events/                    # 内核事件
-    │   └── exceptions/                # 内核异常
-    ├── utils/
-    │   ├── validators/                # 验证器
-    │   ├── helpers/                   # 助手函数
-    │   └── constants/                 # 常量
-    └── config/
-        ├── database/                  # 数据库配置
-        ├── security/                  # 安全配置
-        └── application/               # 应用配置
+```
+
+### 1.3 多租户 IAM 架构总览
+
+```mermaid
+flowchart LR
+  subgraph Entry["入口层"]
+    Gateway[API Gateway / Console SPA]
+    Adapter[协议适配器<br/>OAuth2 / SAML / OIDC]
+  end
+
+  subgraph Interfaces["接口层"]
+    Rest[REST 控制器<br/>MultiTenantController]
+    GQL[GraphQL Resolver]
+  end
+
+  subgraph Application["应用层"]
+    CmdBus[CommandBus]
+    QueryBus[QueryBus]
+    CmdHandler[MultiTenantCommandHandler]
+    QueryHandler[MultiTenantQueryHandler]
+  end
+
+  subgraph Domain["领域层"]
+    UserAgg[UserAccountAggregate<br/>MultiTenantAggregateRoot]
+    AuthAgg[UserAuthorizationAggregate<br/>ES + CASL]
+    OrgAgg[OrganizationAggregate]
+  end
+
+  subgraph Infra["基础设施层"]
+    CLS[CLS TenantContext]
+    Repo[BaseTenantRepository<br/>TenantAwareSubscriber]
+    EventStore[Event Store]
+    Audit[AuditService / AppLogger]
+  end
+
+  Gateway --> Adapter --> Rest
+  Adapter --> GQL
+  Rest --> CLS
+  GQL --> CLS
+  Rest --> CmdBus --> CmdHandler --> UserAgg
+  CmdHandler --> AuthAgg
+  GQL --> QueryBus --> QueryHandler --> AuthAgg
+  QueryHandler --> Repo
+  UserAgg --> Repo
+  Repo --> EventStore
+  CmdHandler --> Audit
 ```
 
 ## 2. 子领域划分
@@ -232,6 +255,49 @@ src/
 - 评估访问权限
 - 管理权限策略
 ```
+
+##### 用户账号聚合（示例）
+```typescript
+import { DateTime } from 'luxon';
+
+export class UserAccountAggregate extends MultiTenantAggregateRoot {
+  private constructor(
+    private readonly _id: UserId,
+    tenantId: TenantId,
+    private _email: Email,
+    private _hashedPassword: string | null,
+    private _phone: PhoneNumber | null,
+    private _status: UserStatus = UserStatus.Active
+  ) {
+    super(tenantId);
+  }
+
+  static register(command: RegisterUserCommand): UserAccountAggregate {
+    const aggregate = new UserAccountAggregate(
+      UserId.create(),
+      TenantId.create(command.securityContext.tenantId),
+      Email.create(command.email),
+      PasswordHasher.hash(command.password),
+      command.phone ? PhoneNumber.create(command.phone) : null
+    );
+
+    aggregate.touch();
+    aggregate.addDomainEvent(new UserRegisteredEvent(aggregate._id, aggregate.tenantId, DateTime.now()));
+    return aggregate;
+  }
+
+  deactivate(operator: UserId, reason: string): void {
+    if (this._status === UserStatus.Inactive) {
+      return;
+    }
+
+    this._status = UserStatus.Inactive;
+    this.softDelete();
+    this.addDomainEvent(new UserDeactivatedEvent(this._id, this.tenantId, operator, reason, DateTime.now()));
+  }
+}
+```
+> 说明：聚合根继承 `MultiTenantAggregateRoot`，自动维护 `createdAt`、`updatedAt`、`deletedAt` 字段，所有领域事件携带租户上下文与 `DateTime` 时间戳。
 
 ### 2.2 支撑子领域
 
@@ -401,6 +467,8 @@ src/
 export class CaslModule {}
 ```
 
+> 多层隔离提示：CASL 能力工厂必须基于 `tenantId`、`organizationId`、`departmentIds` 组合生成规则，所有 `Ability` 计算应调用与多租户基础设施一致的查询过滤器，防止跨层级越权。
+
 ### 3.3 CQRS 模块配置
 
 ```typescript
@@ -453,6 +521,47 @@ export class CaslModule {}
 })
 export class CqrsModule {}
 ```
+
+### 3.3.1 注册用户命令处理器（示例）
+```typescript
+@CommandHandler(RegisterUserCommand)
+export class RegisterUserCommandHandler extends MultiTenantCommandHandler<RegisterUserCommand> {
+  constructor(
+    abilityService: CaslAbilityService,
+    tenantRepository: TenantRepository,
+    eventStore: EventStore,
+    auditService: AuditService,
+    eventBus: EventBus,
+    private readonly userRepository: UserAccountRepository,
+    private readonly commandValidator: CommandValidator
+  ) {
+    super(abilityService, tenantRepository, eventStore, auditService, eventBus);
+  }
+
+  async execute(command: RegisterUserCommand): Promise<void> {
+    await this.commandValidator.validate(command);
+    await this.validateTenantStatus(command);
+    await this.validateCommandPermission(command, 'create', { __typename: 'UserAccount' });
+
+    const tenantId = TenantId.create(command.securityContext.tenantId);
+    const email = Email.create(command.email);
+
+    if (await this.userRepository.existsByEmail(tenantId, email)) {
+      throw new BusinessRuleViolation('邮箱已被占用');
+    }
+
+    const aggregate = UserAccountAggregate.register(command);
+    await this.userRepository.save(aggregate);
+
+    const events = aggregate.getUncommittedEvents();
+    await this.saveMultiTenantAggregate(aggregate);
+    await this.publishMultiTenantEvents(events);
+
+    await this.auditService.recordUserRegistered(command.securityContext, aggregate.id);
+  }
+}
+```
+> 说明：命令处理器复用多租户基类能力，统一完成租户状态校验、权限校验、事件存储与审计记录。
 
 ### 3.4 数据库配置
 
@@ -544,6 +653,15 @@ export class SecurityConfig {
   }
 }
 ```
+
+### 3.6 相关模块依赖
+- `libs/shared/security`：定义 `SecurityContext`、`TenantContext`，与 `MultiTenantCommand`/`MultiTenantQuery` 共享同一上下文模型。
+- `libs/infra/multi-tenancy`：提供 CLS、`BaseTenantRepository`、`TenantAwareSubscriber`，下一阶段重构将扩展组织/部门级过滤策略。
+- `libs/infra/auth`：统一认证协议适配（OAuth2/OIDC/SAML 等）。
+- `libs/applications/auth`：IAM CQRS 命令/查询实现，必须继承多租户命令/查询处理器基类。
+- `libs/domains/auth` 与 `libs/domains/permission`：领域聚合均继承 `MultiTenantAggregateRoot`，事件类型必须使用 `MultiTenantDomainEvent`。
+- `docs/designs/casl-muti-tenant-auth-cqrs-es-eda.md`：权限设计详细说明，需要与本文保持同步。
+- `docs/guides/*.md`：多租户规范的权威来源，IAM 实现的所有模块需逐条对照执行。
 
 ## 4. 开发阶段规划
 
