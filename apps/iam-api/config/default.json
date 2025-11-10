@@ -1,0 +1,51 @@
+{
+  "NODE_ENV": "development",
+  "PORT": 3000,
+  "HOST": "0.0.0.0",
+  "LOG_LEVEL": "info",
+  "logging": {
+    "level": "info",
+    "prettyPrint": true,
+    "timestamp": true,
+    "enabled": true,
+    "context": {
+      "enabled": true,
+      "includeRequestDetails": true,
+      "includeUserInfo": false
+    },
+    "sanitizer": {
+      "enabled": true,
+      "sensitiveFields": [
+        "password",
+        "token",
+        "secret",
+        "apiKey",
+        "api_key",
+        "authorization",
+        "creditCard",
+        "credit_card",
+        "ssn",
+        "socialSecurityNumber"
+      ],
+      "placeholder": "***"
+    },
+    "performance": {
+      "enabled": true,
+      "trackLogWriteTime": true
+    },
+    "errorHandling": {
+      "fallbackToConsole": false,
+      "silentFailures": false
+    }
+  },
+  "metrics": {
+    "path": "/metrics",
+    "enableDefaultMetrics": true
+  },
+  "swagger": {
+    "enabled": true,
+    "serverUrl": "http://localhost:3001",
+    "stagingUrl": "https://staging-api.hl8.com",
+    "productionUrl": "https://api.hl8.com"
+  }
+}

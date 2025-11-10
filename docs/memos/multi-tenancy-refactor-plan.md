@@ -12,15 +12,15 @@
 
 ## ✅ 现有实现与规范对照
 
-| 能力 | 现状 | 规范要求 | 结论 |
-| --- | --- | --- | --- |
-| 租户上下文管理 | CLS + `TenantContextExecutor` 自动注入 | 与指南一致 | 保留 |
-| 仓储过滤 | `BaseTenantRepository` 自动追加 `tenantId` | 匹配租户级隔离 | 保留，但需扩展组织/部门校验 |
-| 持久化订阅 | `TenantAwareSubscriber` 写入/校验 `tenantId` | 防止串租 | 保留 |
-| ID 生成 | 领域层值对象负责 UUID v4，数据库使用 `uuid` | 与规范一致 | 保留 |
-| 审计字段 | 数据库实体含 `createdAt`/`updatedAt`/`deletedAt?` | 聚合需同步触发 `touch()`/`softDelete()` | 重构中校验映射器 |
-| 日志接口 | 使用 `Logger` (`@hl8/logger`) | 指南推荐 `AppLoggerService`/`InjectLogger` | 后续统一注入方式 |
-| 多级隔离 | 仅租户级 | 指南要求租户+组织+部门 | 需在仓储自定义方法中附加更多约束 |
+| 能力           | 现状                                              | 规范要求                                   | 结论                             |
+| -------------- | ------------------------------------------------- | ------------------------------------------ | -------------------------------- |
+| 租户上下文管理 | CLS + `TenantContextExecutor` 自动注入            | 与指南一致                                 | 保留                             |
+| 仓储过滤       | `BaseTenantRepository` 自动追加 `tenantId`        | 匹配租户级隔离                             | 保留，但需扩展组织/部门校验      |
+| 持久化订阅     | `TenantAwareSubscriber` 写入/校验 `tenantId`      | 防止串租                                   | 保留                             |
+| ID 生成        | 领域层值对象负责 UUID v4，数据库使用 `uuid`       | 与规范一致                                 | 保留                             |
+| 审计字段       | 数据库实体含 `createdAt`/`updatedAt`/`deletedAt?` | 聚合需同步触发 `touch()`/`softDelete()`    | 重构中校验映射器                 |
+| 日志接口       | 使用 `Logger` (`@hl8/logger`)                     | 指南推荐 `AppLoggerService`/`InjectLogger` | 后续统一注入方式                 |
+| 多级隔离       | 仅租户级                                          | 指南要求租户+组织+部门                     | 需在仓储自定义方法中附加更多约束 |
 
 ## 🛠️ 下一步重构行动
 
@@ -48,6 +48,5 @@
 
 ---
 
-*文档更新时间：2025-11-10*  
-*维护人：GPT-5 Codex（自动生成，可在重构执行前按需补充）*
-
+_文档更新时间：2025-11-10_  
+_维护人：GPT-5 Codex（自动生成，可在重构执行前按需补充）_

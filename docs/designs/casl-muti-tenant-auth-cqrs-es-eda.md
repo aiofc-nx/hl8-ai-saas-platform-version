@@ -52,7 +52,7 @@
 ### 2.1 事件溯源的权限聚合根
 
 ```typescript
-import { DateTime } from 'luxon';
+import { DateTime } from "luxon";
 
 // 用户权限聚合根 (事件溯源 + 多租户 + 审计)
 export class UserAuthorization extends MultiTenantEventSourcedAggregateRoot {
@@ -69,13 +69,10 @@ export class UserAuthorization extends MultiTenantEventSourcedAggregateRoot {
   // 从事件历史重建
   static reconstitute(events: MultiTenantDomainEvent[]): UserAuthorization {
     if (events.length === 0) {
-      throw new EmptyEventStreamError('用户权限事件流不能为空');
+      throw new EmptyEventStreamError("用户权限事件流不能为空");
     }
     const first = events[0];
-    const aggregate = new UserAuthorization(
-      UserId.create(first.aggregateId),
-      first.tenantId
-    );
+    const aggregate = new UserAuthorization(UserId.create(first.aggregateId), first.tenantId);
     aggregate.loadFromHistory(events);
     return aggregate;
   }
@@ -84,20 +81,14 @@ export class UserAuthorization extends MultiTenantEventSourcedAggregateRoot {
   assignRole(command: AssignRoleCommand): void {
     // 权限检查 - 只有管理员可以分配角色
     if (!this.canAssignRole(command.assignedBy, command.role)) {
-      throw new AuthorizationError('无权分配该角色');
+      throw new AuthorizationError("无权分配该角色");
     }
 
     if (this._roles.has(command.role.name)) {
       return; // 已存在
     }
 
-    this.apply(new RoleAssignedEvent(
-      this._userId,
-      this.tenantId,
-      command.role,
-      command.assignedBy,
-      DateTime.now()
-    ));
+    this.apply(new RoleAssignedEvent(this._userId, this.tenantId, command.role, command.assignedBy, DateTime.now()));
   }
 
   // 撤销角色命令
@@ -107,16 +98,10 @@ export class UserAuthorization extends MultiTenantEventSourcedAggregateRoot {
     }
 
     if (!this.canRevokeRole(command.revokedBy, command.roleName)) {
-      throw new AuthorizationError('无权撤销该角色');
+      throw new AuthorizationError("无权撤销该角色");
     }
 
-    this.apply(new RoleRevokedEvent(
-      this._userId,
-      this.tenantId,
-      command.roleName,
-      command.revokedBy,
-      DateTime.now()
-    ));
+    this.apply(new RoleRevokedEvent(this._userId, this.tenantId, command.roleName, command.revokedBy, DateTime.now()));
   }
 
   // 检查权限
@@ -142,9 +127,9 @@ export class UserAuthorization extends MultiTenantEventSourcedAggregateRoot {
 
     // 基础规则
     rules.push({
-      action: 'read',
-      subject: 'Tenant',
-      conditions: { id: this.tenantId.value }
+      action: "read",
+      subject: "Tenant",
+      conditions: { id: this.tenantId.value },
     });
 
     // 角色规则
@@ -187,7 +172,7 @@ export class UserAuthorization extends MultiTenantEventSourcedAggregateRoot {
 
   private assertTenant(tenantId: TenantId): void {
     if (!this.tenantId.equals(tenantId)) {
-      throw new CrossTenantOperationError('跨租户权限事件被拒绝');
+      throw new CrossTenantOperationError("跨租户权限事件被拒绝");
     }
   }
 }
@@ -203,7 +188,7 @@ export class RoleAssignedEvent extends MultiTenantDomainEvent {
     public readonly tenantId: TenantId,
     public readonly role: TenantRole,
     public readonly assignedBy: UserId,
-    public readonly assignedAt: DateTime
+    public readonly assignedAt: DateTime,
   ) {
     super(userId.value, tenantId);
   }
@@ -215,7 +200,7 @@ export class RoleRevokedEvent extends MultiTenantDomainEvent {
     public readonly tenantId: TenantId,
     public readonly roleName: string,
     public readonly revokedBy: UserId,
-    public readonly revokedAt: DateTime
+    public readonly revokedAt: DateTime,
   ) {
     super(userId.value, tenantId);
   }
@@ -227,7 +212,7 @@ export class PermissionGrantedEvent extends MultiTenantDomainEvent {
     public readonly tenantId: TenantId,
     public readonly permission: Permission,
     public readonly grantedBy: UserId,
-    public readonly grantedAt: DateTime
+    public readonly grantedAt: DateTime,
   ) {
     super(userId.value, tenantId);
   }
@@ -240,7 +225,7 @@ export class AuthorizationStatusChangedEvent extends MultiTenantDomainEvent {
     public readonly oldStatus: AuthorizationStatus,
     public readonly newStatus: AuthorizationStatus,
     public readonly changedBy: UserId,
-    public readonly reason: string
+    public readonly reason: string,
   ) {
     super(userId.value, tenantId);
   }
@@ -254,53 +239,33 @@ export class AuthorizationStatusChangedEvent extends MultiTenantDomainEvent {
 ```typescript
 // 基础 CASL 命令
 export abstract class CaslCommand extends MultiTenantCommand {
-  protected constructor(
-    securityContext: SecurityContext,
-    commandId: string = ulid()
-  ) {
+  protected constructor(securityContext: SecurityContext, commandId: string = ulid()) {
     super(securityContext, commandId);
   }
 }
 
 // 带权限验证的命令处理器基类
-export abstract class CaslCommandHandler<TCommand extends CaslCommand>
-  extends MultiTenantCommandHandler<TCommand> {
-
+export abstract class CaslCommandHandler<TCommand extends CaslCommand> extends MultiTenantCommandHandler<TCommand> {
   constructor(
     protected readonly abilityService: CaslAbilityService,
     tenantRepository: TenantRepository,
     eventStore: EventStore,
     auditService: AuditService,
     eventBus: EventBus,
-    protected readonly commandValidator: CommandValidator
+    protected readonly commandValidator: CommandValidator,
   ) {
     super(abilityService, tenantRepository, eventStore, auditService, eventBus);
   }
 
-  protected async validateCommandPermission(
-    command: TCommand,
-    action: Action,
-    subject: AppSubject
-  ): Promise<void> {
-    const ability = await this.abilityService.getAbilityForUser(
-      command.securityContext.userId,
-      command.securityContext.tenantId
-    );
+  protected async validateCommandPermission(command: TCommand, action: Action, subject: AppSubject): Promise<void> {
+    const ability = await this.abilityService.getAbilityForUser(command.securityContext.userId, command.securityContext.tenantId);
 
     if (!ability.can(action, subject)) {
-      throw new AuthorizationError(
-        `无权执行命令: ${action} ${typeof subject === 'string' ? subject : subject.__typename}`
-      );
+      throw new AuthorizationError(`无权执行命令: ${action} ${typeof subject === "string" ? subject : subject.__typename}`);
     }
   }
 
-  protected async loadAggregate<
-    TAggregate extends MultiTenantEventSourcedAggregateRoot
-  >(
-    aggregateClass: new (...args: unknown[]) => TAggregate,
-    aggregateId: string,
-    tenantId: TenantId
-  ): Promise<TAggregate> {
+  protected async loadAggregate<TAggregate extends MultiTenantEventSourcedAggregateRoot>(aggregateClass: new (...args: unknown[]) => TAggregate, aggregateId: string, tenantId: TenantId): Promise<TAggregate> {
     const events = await this.eventStore.getEvents(aggregateId, tenantId);
     return aggregateClass.reconstitute(events);
   }
@@ -316,33 +281,18 @@ export class AssignRoleCommandHandler extends CaslCommandHandler<AssignRoleComma
     auditService: AuditService,
     eventBus: EventBus,
     commandValidator: CommandValidator,
-    private readonly roleRepository: RoleRepository
+    private readonly roleRepository: RoleRepository,
   ) {
-    super(
-      abilityService,
-      tenantRepository,
-      eventStore,
-      auditService,
-      eventBus,
-      commandValidator
-    );
+    super(abilityService, tenantRepository, eventStore, auditService, eventBus, commandValidator);
   }
 
   async execute(command: AssignRoleCommand): Promise<void> {
     await this.commandValidator.validate(command);
     await this.validateTenantStatus(command);
 
-    await this.validateCommandPermission(
-      command,
-      'assign',
-      { __typename: 'TenantRole', name: command.role.name }
-    );
+    await this.validateCommandPermission(command, "assign", { __typename: "TenantRole", name: command.role.name });
 
-    const userAuth = await this.loadAggregate(
-      UserAuthorization,
-      `user_auth_${command.userId.value}_${command.securityContext.tenantId}`,
-      TenantId.create(command.securityContext.tenantId)
-    );
+    const userAuth = await this.loadAggregate(UserAuthorization, `user_auth_${command.userId.value}_${command.securityContext.tenantId}`, TenantId.create(command.securityContext.tenantId));
 
     userAuth.assignRole(command);
 
@@ -359,33 +309,26 @@ export class CreateOrderCommandHandler extends CaslCommandHandler<CreateOrderCom
     await this.commandValidator.validate(command);
     await this.validateTenantStatus(command);
 
-    const ability = await this.abilityService.getAbilityForUser(
-      command.securityContext.userId,
-      command.securityContext.tenantId
-    );
+    const ability = await this.abilityService.getAbilityForUser(command.securityContext.userId, command.securityContext.tenantId);
 
     // 复杂权限检查 - 基于订单属性
     const orderSubject = {
-      __typename: 'Order',
+      __typename: "Order",
       totalAmount: command.totalAmount,
       productType: command.productType,
-      customerTier: command.customerTier
+      customerTier: command.customerTier,
     };
 
-    if (!ability.can('create', orderSubject)) {
-      throw new AuthorizationError('无权创建此类型订单');
+    if (!ability.can("create", orderSubject)) {
+      throw new AuthorizationError("无权创建此类型订单");
     }
 
     // 加载订单聚合
-    const order = Order.create(
-      command,
-      TenantId.create(command.securityContext.tenantId),
-      OrganizationId.create(command.organizationId)
-    );
+    const order = Order.create(command, TenantId.create(command.securityContext.tenantId), OrganizationId.create(command.organizationId));
 
     // 验证对创建后订单的权限
-    if (!ability.can('read', order)) {
-      throw new AuthorizationError('无权访问创建的订单');
+    if (!ability.can("read", order)) {
+      throw new AuthorizationError("无权访问创建的订单");
     }
 
     const events = order.getUncommittedEvents();
@@ -404,43 +347,25 @@ export class CreateOrderCommandHandler extends CaslCommandHandler<CreateOrderCom
 export abstract class CaslQuery implements IQuery {
   constructor(
     public readonly securityContext: SecurityContext,
-    public readonly queryId: string = ulid()
+    public readonly queryId: string = ulid(),
   ) {}
 }
 
 // CASL 查询处理器基类
-export abstract class CaslQueryHandler<TQuery extends CaslQuery, TResult> 
-  implements IQueryHandler<TQuery, TResult> {
-  
+export abstract class CaslQueryHandler<TQuery extends CaslQuery, TResult> implements IQueryHandler<TQuery, TResult> {
   constructor(
     protected readonly abilityService: CaslAbilityService,
-    protected readonly caslFilter: CaslMikroORMFilter
+    protected readonly caslFilter: CaslMikroORMFilter,
   ) {}
 
-  protected async applyCaslFilter<T>(
-    query: TQuery,
-    entityClass: EntityClass<T>,
-    action: Action = 'read'
-  ): Promise<FilterQuery<T>> {
-    return this.caslFilter.addConditionsToQuery(
-      entityClass,
-      action,
-      query.securityContext.userId,
-      query.securityContext.tenantId
-    );
+  protected async applyCaslFilter<T>(query: TQuery, entityClass: EntityClass<T>, action: Action = "read"): Promise<FilterQuery<T>> {
+    return this.caslFilter.addConditionsToQuery(entityClass, action, query.securityContext.userId, query.securityContext.tenantId);
   }
 
-  protected async filterResults<T extends SubjectObject>(
-    results: T[],
-    query: TQuery,
-    action: Action = 'read'
-  ): Promise<T[]> {
-    const ability = await this.abilityService.getAbilityForUser(
-      query.securityContext.userId,
-      query.securityContext.tenantId
-    );
+  protected async filterResults<T extends SubjectObject>(results: T[], query: TQuery, action: Action = "read"): Promise<T[]> {
+    const ability = await this.abilityService.getAbilityForUser(query.securityContext.userId, query.securityContext.tenantId);
 
-    return results.filter(result => ability.can(action, result));
+    return results.filter((result) => ability.can(action, result));
   }
 }
 
@@ -451,7 +376,7 @@ export class GetOrdersQueryHandler extends CaslQueryHandler<GetOrdersQuery, Orde
     abilityService: CaslAbilityService,
     caslFilter: CaslMikroORMFilter,
     private readonly orderRepository: OrderRepository,
-    private readonly orderProjection: OrderProjection
+    private readonly orderProjection: OrderProjection,
   ) {
     super(abilityService, caslFilter);
   }
@@ -468,22 +393,15 @@ export class GetOrdersQueryHandler extends CaslQueryHandler<GetOrdersQuery, Orde
 
   private async executeWithProjection(query: GetOrdersQuery): Promise<Order[]> {
     // 从读模型获取数据
-    const orders = await this.orderProjection.findByTenant(
-      TenantId.create(query.securityContext.tenantId),
-      query.filters
-    );
+    const orders = await this.orderProjection.findByTenant(TenantId.create(query.securityContext.tenantId), query.filters);
 
     // 应用 CASL 过滤
-    return this.filterResults(orders, query, 'read');
+    return this.filterResults(orders, query, "read");
   }
 
   private async executeWithCaslFilter(query: GetOrdersQuery): Promise<Order[]> {
     // 生成 CASL 过滤条件
-    const caslConditions = await this.applyCaslFilter(
-      query,
-      Order,
-      'read'
-    );
+    const caslConditions = await this.applyCaslFilter(query, Order, "read");
 
     // 执行查询
     const tenantId = TenantId.create(query.securityContext.tenantId);
@@ -496,9 +414,9 @@ export class GetOrdersQueryHandler extends CaslQueryHandler<GetOrdersQuery, Orde
       departmentIds,
       {
         ...query.filters,
-        ...caslConditions
+        ...caslConditions,
       },
-      query.pagination
+      query.pagination,
     );
   }
 }
@@ -524,38 +442,29 @@ export class RoleAssignedEventHandler implements IEventHandler<RoleAssignedEvent
     private readonly cacheService: CacheService,
     private readonly eventBus: EventBus,
     @InjectLogger(RoleAssignedEventHandler.name)
-    private readonly logger: AppLoggerService
+    private readonly logger: AppLoggerService,
   ) {}
 
   async handle(event: RoleAssignedEvent): Promise<void> {
     try {
       // 清除用户能力缓存
-      await this.abilityService.clearUserCache(
-        event.userId.value,
-        event.tenantId.value
-      );
+      await this.abilityService.clearUserCache(event.userId.value, event.tenantId.value);
 
       // 更新用户权限投影
       await this.updateUserPermissionProjection(event);
 
       // 发布权限变更通知事件
-      await this.eventBus.publish(new PermissionChangedEvent(
-        event.userId,
-        event.tenantId,
-        'role_assigned',
-        { role: event.role.name }
-      ));
+      await this.eventBus.publish(new PermissionChangedEvent(event.userId, event.tenantId, "role_assigned", { role: event.role.name }));
 
-      this.logger.info('角色分配事件处理完成', {
-        userId: event.userId.value,
-        tenantId: event.tenantId.value
-      });
-
-    } catch (error) {
-      this.logger.error('角色分配事件处理失败', {
+      this.logger.info("角色分配事件处理完成", {
         userId: event.userId.value,
         tenantId: event.tenantId.value,
-        error: error instanceof Error ? error.message : error
+      });
+    } catch (error) {
+      this.logger.error("角色分配事件处理失败", {
+        userId: event.userId.value,
+        tenantId: event.tenantId.value,
+        error: error instanceof Error ? error.message : error,
       });
       // 重试机制或死信队列处理
     }
@@ -563,11 +472,7 @@ export class RoleAssignedEventHandler implements IEventHandler<RoleAssignedEvent
 
   private async updateUserPermissionProjection(event: RoleAssignedEvent): Promise<void> {
     // 更新读模型的用户权限数据
-    await this.userPermissionProjection.updateUserRoles(
-      event.userId,
-      event.tenantId,
-      event.role
-    );
+    await this.userPermissionProjection.updateUserRoles(event.userId, event.tenantId, event.role);
   }
 }
 
@@ -576,7 +481,7 @@ export class RoleAssignedEventHandler implements IEventHandler<RoleAssignedEvent
 export class PermissionChangeSaga extends Saga {
   constructor(
     @InjectLogger(PermissionChangeSaga.name)
-    private readonly logger: AppLoggerService
+    private readonly logger: AppLoggerService,
   ) {
     super();
   }
@@ -585,7 +490,7 @@ export class PermissionChangeSaga extends Saga {
   async onRoleAssigned(event: RoleAssignedEvent): Promise<void> {
     // 开始 Saga
     const sagaId = `permission_change_${event.userId.value}_${event.tenantId.value}`;
-    
+
     try {
       // 1. 验证角色分配是否有效
       await this.validateRoleAssignment(event);
@@ -600,20 +505,10 @@ export class PermissionChangeSaga extends Saga {
       await this.recordAuditLog(event);
 
       // Saga 完成
-      await this.eventBus.publish(new PermissionChangeCompletedEvent(
-        event.userId,
-        event.tenantId,
-        sagaId
-      ));
-
+      await this.eventBus.publish(new PermissionChangeCompletedEvent(event.userId, event.tenantId, sagaId));
     } catch (error) {
       // Saga 失败，触发补偿操作
-      await this.eventBus.publish(new PermissionChangeFailedEvent(
-        event.userId,
-        event.tenantId,
-        sagaId,
-        error.message
-      ));
+      await this.eventBus.publish(new PermissionChangeFailedEvent(event.userId, event.tenantId, sagaId, error.message));
     }
   }
 
@@ -625,24 +520,16 @@ export class PermissionChangeSaga extends Saga {
     }
 
     // 检查分配者权限
-    const assignerAbility = await this.abilityService.getAbilityForUser(
-      event.assignedBy.value,
-      event.tenantId.value
-    );
+    const assignerAbility = await this.abilityService.getAbilityForUser(event.assignedBy.value, event.tenantId.value);
 
-    if (!assignerAbility.can('assign', role)) {
-      throw new AuthorizationError('分配者无权分配该角色');
+    if (!assignerAbility.can("assign", role)) {
+      throw new AuthorizationError("分配者无权分配该角色");
     }
   }
 
   private async updateRelatedSystems(event: RoleAssignedEvent): Promise<void> {
     // 并行更新所有相关系统
-    await Promise.all([
-      this.updateUserPermissionProjection(event),
-      this.updateAccessControlLists(event),
-      this.updateApiGatewayPolicies(event),
-      this.updateReportingSystems(event)
-    ]);
+    await Promise.all([this.updateUserPermissionProjection(event), this.updateAccessControlLists(event), this.updateApiGatewayPolicies(event), this.updateReportingSystems(event)]);
   }
 }
 
@@ -651,21 +538,15 @@ export class PermissionChangeSaga extends Saga {
 export class PermissionChangedEventHandler implements IEventHandler<PermissionChangedEvent> {
   constructor(
     private readonly abilityService: CaslAbilityService,
-    private readonly abilityProjection: AbilityProjection
+    private readonly abilityProjection: AbilityProjection,
   ) {}
 
   async handle(event: PermissionChangedEvent): Promise<void> {
     // 异步重建用户能力
-    await this.abilityProjection.rebuildUserAbility(
-      event.userId,
-      event.tenantId
-    );
+    await this.abilityProjection.rebuildUserAbility(event.userId, event.tenantId);
 
     // 预加载能力到缓存
-    await this.abilityService.getAbilityForUser(
-      event.userId.value,
-      event.tenantId.value
-    );
+    await this.abilityService.getAbilityForUser(event.userId.value, event.tenantId.value);
   }
 }
 ```
@@ -678,16 +559,13 @@ export class PermissionChangedEventHandler implements IEventHandler<PermissionCh
 export class UserPermissionProjection {
   constructor(
     private readonly em: EntityManager,
-    private readonly eventStore: EventStore
+    private readonly eventStore: EventStore,
   ) {}
 
   // 从事件流构建用户权限投影
   @ProjectionHandler(RoleAssignedEvent)
   async onRoleAssigned(event: RoleAssignedEvent): Promise<void> {
-    const userPermission = await this.getOrCreateUserPermission(
-      event.userId,
-      event.tenantId
-    );
+    const userPermission = await this.getOrCreateUserPermission(event.userId, event.tenantId);
 
     userPermission.addRole(event.role);
     userPermission.version = event.version;
@@ -697,10 +575,7 @@ export class UserPermissionProjection {
 
   @ProjectionHandler(RoleRevokedEvent)
   async onRoleRevoked(event: RoleRevokedEvent): Promise<void> {
-    const userPermission = await this.getUserPermission(
-      event.userId,
-      event.tenantId
-    );
+    const userPermission = await this.getUserPermission(event.userId, event.tenantId);
 
     if (userPermission) {
       userPermission.removeRole(event.roleName);
@@ -711,14 +586,12 @@ export class UserPermissionProjection {
 
   // 重建投影
   async rebuildUserPermission(userId: UserId, tenantId: TenantId): Promise<void> {
-    const events = await this.eventStore.getEvents(
-      `user_auth_${userId.value}_${tenantId.value}`
-    );
+    const events = await this.eventStore.getEvents(`user_auth_${userId.value}_${tenantId.value}`);
 
     // 清除现有投影
     await this.em.nativeDelete(UserPermissionEntity, {
       userId: userId.value,
-      tenantId: tenantId.value
+      tenantId: tenantId.value,
     });
 
     // 重新应用事件
@@ -731,7 +604,7 @@ export class UserPermissionProjection {
   async getUserPermissions(userId: UserId, tenantId: TenantId): Promise<UserPermissionEntity> {
     return this.em.findOne(UserPermissionEntity, {
       userId: userId.value,
-      tenantId: tenantId.value
+      tenantId: tenantId.value,
     });
   }
 
@@ -746,17 +619,17 @@ export class UserPermissionProjection {
 export class AbilityProjection {
   constructor(
     private readonly abilityService: CaslAbilityService,
-    private readonly userPermissionProjection: UserPermissionProjection
+    private readonly userPermissionProjection: UserPermissionProjection,
   ) {}
 
   // 预计算用户能力
   async rebuildUserAbility(userId: UserId, tenantId: TenantId): Promise<void> {
     const rules = await this.userPermissionProjection.getUserAbilities(userId, tenantId);
-    
+
     // 预加载到缓存
     const ability = createMongoAbility<AppAbility>(rules);
     const cacheKey = `${userId.value}:${tenantId.value}`;
-    
+
     // 这里可以存储到 Redis 或其他缓存
     await this.cacheService.set(`casl:ability:${cacheKey}`, rules, 3600); // 1小时
   }
@@ -764,19 +637,12 @@ export class AbilityProjection {
   // 批量预计算
   async rebuildTenantAbilities(tenantId: TenantId): Promise<void> {
     const userPermissions = await this.userPermissionProjection.getTenantUserPermissions(tenantId);
-    
+
     const batchSize = 100;
     for (let i = 0; i < userPermissions.length; i += batchSize) {
       const batch = userPermissions.slice(i, i + batchSize);
-      
-      await Promise.all(
-        batch.map(permission => 
-          this.rebuildUserAbility(
-            UserId.create(permission.userId), 
-            TenantId.create(permission.tenantId)
-          )
-        )
-      );
+
+      await Promise.all(batch.map((permission) => this.rebuildUserAbility(UserId.create(permission.userId), TenantId.create(permission.tenantId))));
     }
   }
 }
@@ -792,7 +658,7 @@ export class AbilityProjection {
 export class EventSourcedCaslAbilityFactory extends DomainCaslAbilityFactory {
   constructor(
     private readonly eventStore: EventStore,
-    private readonly userAuthProjection: UserPermissionProjection
+    private readonly userAuthProjection: UserPermissionProjection,
   ) {
     super(/* 依赖注入 */);
   }
@@ -813,17 +679,17 @@ export class EventSourcedCaslAbilityFactory extends DomainCaslAbilityFactory {
   }
 
   private async createFromEventStream(user: User, tenant: Tenant): Promise<AppAbility> {
-    const events = await this.eventStore.getEvents(
-      `user_auth_${user.id.value}_${tenant.id.value}`
-    );
+    const events = await this.eventStore.getEvents(`user_auth_${user.id.value}_${tenant.id.value}`);
 
     if (events.length === 0) {
       // 初始权限
-      return createMongoAbility<AppAbility>([{
-        action: 'read',
-        subject: 'Tenant',
-        conditions: { id: tenant.id.value }
-      }]);
+      return createMongoAbility<AppAbility>([
+        {
+          action: "read",
+          subject: "Tenant",
+          conditions: { id: tenant.id.value },
+        },
+      ]);
     }
 
     // 从事件重建聚合
@@ -843,7 +709,7 @@ export class EventSourcedCaslAbilityFactory extends DomainCaslAbilityFactory {
 export class PermissionEventPublisher {
   constructor(
     private readonly eventBus: EventBus,
-    private readonly messageBroker: MessageBroker
+    private readonly messageBroker: MessageBroker,
   ) {}
 
   async publishPermissionEvents(events: DomainEvent[]): Promise<void> {
@@ -852,30 +718,25 @@ export class PermissionEventPublisher {
 
     // 发布到消息队列 (用于外部系统)
     for (const event of events) {
-      await this.messageBroker.publish('permission.events', {
+      await this.messageBroker.publish("permission.events", {
         type: event.constructor.name,
         data: event,
         timestamp: new Date(),
         metadata: {
           eventId: event.eventId,
-          aggregateId: event.aggregateId
-        }
+          aggregateId: event.aggregateId,
+        },
       });
     }
   }
 
   // 发布权限变更通知
-  async publishPermissionChange(
-    userId: UserId,
-    tenantId: TenantId,
-    changeType: string,
-    details: any
-  ): Promise<void> {
+  async publishPermissionChange(userId: UserId, tenantId: TenantId, changeType: string, details: any): Promise<void> {
     const event = new PermissionChangedEvent(userId, tenantId, changeType, details);
-    
-    await this.messageBroker.publish('permission.changes', {
+
+    await this.messageBroker.publish("permission.changes", {
       event,
-      recipients: this.getNotificationRecipients(userId, tenantId)
+      recipients: this.getNotificationRecipients(userId, tenantId),
     });
   }
 }
@@ -887,77 +748,64 @@ export class PermissionEventPublisher {
 
 ```typescript
 // 命令控制器
-@Controller('commands')
+@Controller("commands")
 @UseGuards(MultiTenantAuthGuard, CaslGuard)
 export class CommandController {
   constructor(
     private readonly commandBus: CommandBus,
-    private readonly abilityService: CaslAbilityService
+    private readonly abilityService: CaslAbilityService,
   ) {}
 
-  @Post('roles/assign')
-  @CheckPolicies('assign', 'Role')
-  async assignRole(
-    @SecurityContext() context: SecurityContext,
-    @Body() assignRoleDto: AssignRoleRequestDto
-  ): Promise<ApiResponse<void>> {
-    const command = new AssignRoleCommand({
-      userId: UserId.create(assignRoleDto.userId),
-      tenantId: TenantId.create(context.tenantId),
-      role: await this.roleRepository.findByName(assignRoleDto.roleName),
-      assignedBy: UserId.create(context.userId)
-    }, context);
+  @Post("roles/assign")
+  @CheckPolicies("assign", "Role")
+  async assignRole(@SecurityContext() context: SecurityContext, @Body() assignRoleDto: AssignRoleRequestDto): Promise<ApiResponse<void>> {
+    const command = new AssignRoleCommand(
+      {
+        userId: UserId.create(assignRoleDto.userId),
+        tenantId: TenantId.create(context.tenantId),
+        role: await this.roleRepository.findByName(assignRoleDto.roleName),
+        assignedBy: UserId.create(context.userId),
+      },
+      context,
+    );
 
     await this.commandBus.execute(command);
 
-    return ApiResponse.empty('角色分配成功');
+    return ApiResponse.empty("角色分配成功");
   }
 
-  @Post('orders')
-  @CheckPolicies('create', 'Order')
-  async createOrder(
-    @SecurityContext() context: SecurityContext,
-    @Body() createOrderDto: CreateOrderRequestDto
-  ): Promise<ApiResponse<OrderResponseDto>> {
+  @Post("orders")
+  @CheckPolicies("create", "Order")
+  async createOrder(@SecurityContext() context: SecurityContext, @Body() createOrderDto: CreateOrderRequestDto): Promise<ApiResponse<OrderResponseDto>> {
     const command = new CreateOrderCommand(createOrderDto, context);
     const result = await this.commandBus.execute(command);
 
-    return ApiResponse.success(result, '订单创建成功');
+    return ApiResponse.success(result, "订单创建成功");
   }
 }
 
 // 查询控制器
-@Controller('queries')
+@Controller("queries")
 @UseGuards(MultiTenantAuthGuard, CaslGuard)
 export class QueryController {
   constructor(private readonly queryBus: QueryBus) {}
 
-  @Get('orders')
-  @CheckPolicies('read', 'Order')
-  async getOrders(
-    @SecurityContext() context: SecurityContext,
-    @Query() queryDto: OrderQueryRequestDto
-  ): Promise<ApiResponse<PaginatedResponse<OrderResponseDto>>> {
+  @Get("orders")
+  @CheckPolicies("read", "Order")
+  async getOrders(@SecurityContext() context: SecurityContext, @Query() queryDto: OrderQueryRequestDto): Promise<ApiResponse<PaginatedResponse<OrderResponseDto>>> {
     const query = new GetOrdersQuery(queryDto, context);
     const orders = await this.queryBus.execute(query);
 
     return ApiResponse.paginated(
-      orders.map(order => this.toOrderResponseDto(order)),
-      queryDto.pagination
+      orders.map((order) => this.toOrderResponseDto(order)),
+      queryDto.pagination,
     );
   }
 
-  @Get('users/:id/permissions')
-  @CheckPolicies('read', 'UserPermission')
-  async getUserPermissions(
-    @SecurityContext() context: SecurityContext,
-    @Param('id') userId: string
-  ): Promise<ApiResponse<UserPermissionResponseDto>> {
-    const query = new GetUserPermissionQuery(
-      UserId.create(userId),
-      TenantId.create(context.tenantId),
-      context
-    );
+  @Get("users/:id/permissions")
+  @CheckPolicies("read", "UserPermission")
+  async getUserPermissions(@SecurityContext() context: SecurityContext, @Param("id") userId: string): Promise<ApiResponse<UserPermissionResponseDto>> {
+    const query = new GetUserPermissionQuery(UserId.create(userId), TenantId.create(context.tenantId), context);
 
     const permissions = await this.queryBus.execute(query);
     return ApiResponse.success(this.toPermissionResponseDto(permissions));
@@ -965,26 +813,19 @@ export class QueryController {
 }
 
 // 事件订阅控制器
-@Controller('events')
+@Controller("events")
 @UseGuards(MultiTenantAuthGuard, CaslGuard)
 export class EventController {
   constructor(private readonly eventBus: EventBus) {}
 
-  @Post('permissions/rebuild')
-  @CheckPolicies('manage', 'PermissionSystem')
-  async rebuildPermissions(
-    @SecurityContext() context: SecurityContext,
-    @Body() rebuildDto: RebuildPermissionsRequestDto
-  ): Promise<ApiResponse<void>> {
-    const event = new PermissionsRebuildRequestedEvent(
-      TenantId.create(context.tenantId),
-      UserId.create(context.userId),
-      rebuildDto.scope
-    );
+  @Post("permissions/rebuild")
+  @CheckPolicies("manage", "PermissionSystem")
+  async rebuildPermissions(@SecurityContext() context: SecurityContext, @Body() rebuildDto: RebuildPermissionsRequestDto): Promise<ApiResponse<void>> {
+    const event = new PermissionsRebuildRequestedEvent(TenantId.create(context.tenantId), UserId.create(context.userId), rebuildDto.scope);
 
     await this.eventBus.publish(event);
 
-    return ApiResponse.empty('权限重建任务已提交');
+    return ApiResponse.empty("权限重建任务已提交");
   }
 }
 ```
@@ -1008,7 +849,7 @@ export class EventController {
     CreateOrderCommandHandler,
     RevokeRoleCommandHandler,
 
-    // 查询处理器  
+    // 查询处理器
     GetOrdersQueryHandler,
     GetUserPermissionQueryHandler,
 
@@ -1023,33 +864,23 @@ export class EventController {
 
     // Saga
     {
-      provide: 'PermissionChangeSaga',
-      useClass: PermissionChangeSaga
-    }
+      provide: "PermissionChangeSaga",
+      useClass: PermissionChangeSaga,
+    },
   ],
-  exports: [
-    CaslAbilityService,
-    EventStore,
-    EventBus
-  ]
+  exports: [CaslAbilityService, EventStore, EventBus],
 })
 export class AuthorizationCqrsModule {}
 
 // 事件存储配置
 @Module({
-  imports: [
-    MikroOrmModule.forFeature([
-      UserAuthorizationEntity,
-      UserPermissionEntity,
-      EventEntity
-    ])
-  ],
+  imports: [MikroOrmModule.forFeature([UserAuthorizationEntity, UserPermissionEntity, EventEntity])],
   providers: [
     {
       provide: EventStore,
-      useClass: MikroORMEventStore
-    }
-  ]
+      useClass: MikroORMEventStore,
+    },
+  ],
 })
 export class EventStoreModule {}
 ```
@@ -1081,4 +912,5 @@ export class EventStoreModule {}
 这套设计为企业级多租户应用提供了强大、一致且高性能的权限管理解决方案，完美融合了 CASL、CQRS、ES 和 EDA 的优势。
 
 ---
-*文档版本: 4.0 | 最后更新: 2024-11-XX | 特性: CASL + CQRS + ES + EDA 完整集成*
+
+_文档版本: 4.0 | 最后更新: 2024-11-XX | 特性: CASL + CQRS + ES + EDA 完整集成_

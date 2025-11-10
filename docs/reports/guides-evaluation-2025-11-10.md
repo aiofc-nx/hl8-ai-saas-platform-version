@@ -13,12 +13,12 @@
 
 ## 3. 合规性结论
 
-| 文档 | 合规结论 | 主要违章条款 | 备注 |
-| --- | --- | --- | --- |
-| 应用层指南 | 未合规 | II、VIII 附加约束 | 示例代码存在未声明依赖、接口不一致问题 |
-| 领域层指南 | 未合规 | II、附加约束 | 示例代码语法错误、异步调用位置不合法 |
-| 基础设施层指南 | 未合规 | II、III、VI | 仓储基类定义冲突、示例违背日志规范 |
-| 接口层指南 | 未合规 | II、VI | 多处直接使用 Nest `Logger`，未落实日志统一规范 |
+| 文档           | 合规结论 | 主要违章条款      | 备注                                           |
+| -------------- | -------- | ----------------- | ---------------------------------------------- |
+| 应用层指南     | 未合规   | II、VIII 附加约束 | 示例代码存在未声明依赖、接口不一致问题         |
+| 领域层指南     | 未合规   | II、附加约束      | 示例代码语法错误、异步调用位置不合法           |
+| 基础设施层指南 | 未合规   | II、III、VI       | 仓储基类定义冲突、示例违背日志规范             |
+| 接口层指南     | 未合规   | II、VI            | 多处直接使用 Nest `Logger`，未落实日志统一规范 |
 
 ## 4. 关键问题与证据
 
@@ -28,11 +28,11 @@
 
 ```292:310:docs/guides/domain-layer-guide.md
   public static create(creation: DepartmentCreation): Department {
-    const path = creation.parentId ? 
-      DepartmentPath.createChild(creation.parentId) : 
+    const path = creation.parentId ?
+      DepartmentPath.createChild(creation.parentId) :
       DepartmentPath.root();
-    
-    const level = creation.parentId ? 
+
+    const level = creation.parentId ?
       await this.calculateLevel(creation.parentId) + 1 : 0;
 ```
 
@@ -52,9 +52,9 @@
 - 仓储基类定义与接口同名，`implements MultiTenantRepository<T>` 会递归指向自身，无法通过类型检查，违反“代码即文档原则”：
 
 ```53:104:docs/guides/infrastructure-layer-guide.md
-export abstract class MultiTenantRepository<T extends MultiTenantAggregateRoot> 
+export abstract class MultiTenantRepository<T extends MultiTenantAggregateRoot>
   implements MultiTenantRepository<T> {
-  
+
   constructor(
     protected readonly em: EntityManager,
     protected readonly mapper: EntityMapper<T>,
@@ -74,10 +74,10 @@ export abstract class MultiTenantRepository<T extends MultiTenantAggregateRoot>
 - 多个示例直接注入/实例化 `Logger`，未通过 `@hl8/logger` 输出，违反宪章 VI「日志模块使用规范」：
 
 ```137:168:docs/guides/infrastructure-layer-guide.md
-export class MikroOrmOrganizationRepository 
-  extends MultiTenantRepository<Organization> 
+export class MikroOrmOrganizationRepository
+  extends MultiTenantRepository<Organization>
   implements OrganizationRepository {
-  
+
   constructor(
     em: EntityManager,
     mapper: OrganizationMapper,
@@ -163,8 +163,9 @@ export class MultiTenantExceptionFilter implements ExceptionFilter {
 3. **`docs/guides/infrastructure-layer-guide.md`**
    - 重命名 `MultiTenantRepository` 示例类或接口，避免自引用；补充泛型 Mapper、EntityManager 的完整签名。
    - 将所有 `Logger` 替换为 `@hl8/logger`，并增加简要初始化说明。
-  - 修改 `TenantConnectionManager` 构造逻辑，改为 `async init()` 或 `onModuleInit`，保证示例合法。
-   - 为仓储示例列出必需的异常类型来源（如 `RepositoryError`）。
+
+- 修改 `TenantConnectionManager` 构造逻辑，改为 `async init()` 或 `onModuleInit`，保证示例合法。
+- 为仓储示例列出必需的异常类型来源（如 `RepositoryError`）。
 
 4. **`docs/guides/interface-layer-guide.md`**
    - 替换控制器、守卫、过滤器中的 `new Logger` 为 `@hl8/logger`，并附带配置示例。
@@ -182,6 +183,5 @@ export class MultiTenantExceptionFilter implements ExceptionFilter {
 
 ---
 
-*报告日期：2025-11-10*  
-*撰写人：GPT-5 Codex（自动化评估代理）*
-
+_报告日期：2025-11-10_  
+_撰写人：GPT-5 Codex（自动化评估代理）_

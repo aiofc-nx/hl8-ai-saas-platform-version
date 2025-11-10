@@ -81,24 +81,14 @@ export class Organization extends AggregateRoot {
     private status: OrganizationStatus,
     private settings: OrganizationSettings,
     private createdAt: DateTime,
-    private updatedAt: DateTime
+    private updatedAt: DateTime,
   ) {
     super();
   }
 
   // 创建组织
   static create(creation: OrganizationCreation): Organization {
-    const organization = new Organization(
-      OrganizationId.create(),
-      creation.tenantId,
-      creation.name,
-      creation.code,
-      creation.description,
-      OrganizationStatus.ACTIVE,
-      OrganizationSettings.default(),
-      DateTime.now(),
-      DateTime.now()
-    );
+    const organization = new Organization(OrganizationId.create(), creation.tenantId, creation.name, creation.code, creation.description, OrganizationStatus.ACTIVE, OrganizationSettings.default(), DateTime.now(), DateTime.now());
 
     organization.addDomainEvent(new OrganizationCreatedEvent(organization.id));
     return organization;
@@ -107,13 +97,13 @@ export class Organization extends AggregateRoot {
   // 创建部门
   createDepartment(creation: DepartmentCreation): Department {
     if (!this.canManageDepartments()) {
-      throw new AuthorizationError('无权在组织中创建部门');
+      throw new AuthorizationError("无权在组织中创建部门");
     }
 
     return Department.create({
       ...creation,
       organizationId: this.id,
-      tenantId: this.tenantId
+      tenantId: this.tenantId,
     });
   }
 
@@ -126,7 +116,7 @@ export class Organization extends AggregateRoot {
   // 获取组织所有部门（包括子部门）
   async getAllDepartments(): Promise<Department[]> {
     return this.departmentRepository.findByOrganization(this.id, {
-      includeDescendants: true
+      includeDescendants: true,
     });
   }
 }
@@ -145,34 +135,18 @@ export class Department extends AggregateRoot {
     private status: DepartmentStatus,
     private settings: DepartmentSettings,
     private createdAt: DateTime,
-    private updatedAt: DateTime
+    private updatedAt: DateTime,
   ) {
     super();
   }
 
   // 创建部门
   static create(creation: DepartmentCreation): Department {
-    const path = creation.parentId ? 
-      await this.calculatePath(creation.parentId) : 
-      DepartmentPath.root();
-    
-    const level = creation.parentId ? 
-      await this.calculateLevel(creation.parentId) + 1 : 0;
+    const path = creation.parentId ? await this.calculatePath(creation.parentId) : DepartmentPath.root();
 
-    const department = new Department(
-      DepartmentId.create(),
-      creation.tenantId,
-      creation.organizationId,
-      creation.parentId || null,
-      creation.name,
-      creation.code,
-      path,
-      level,
-      DepartmentStatus.ACTIVE,
-      DepartmentSettings.default(),
-      DateTime.now(),
-      DateTime.now()
-    );
+    const level = creation.parentId ? (await this.calculateLevel(creation.parentId)) + 1 : 0;
+
+    const department = new Department(DepartmentId.create(), creation.tenantId, creation.organizationId, creation.parentId || null, creation.name, creation.code, path, level, DepartmentStatus.ACTIVE, DepartmentSettings.default(), DateTime.now(), DateTime.now());
 
     department.addDomainEvent(new DepartmentCreatedEvent(department.id));
     return department;
@@ -184,7 +158,7 @@ export class Department extends AggregateRoot {
       ...creation,
       organizationId: this.organizationId,
       tenantId: this.tenantId,
-      parentId: this.id
+      parentId: this.id,
     });
   }
 
@@ -201,16 +175,13 @@ export class Department extends AggregateRoot {
   // 检查用户是否在部门或其子部门中
   async isUserInDepartmentTree(userId: UserId): Promise<boolean> {
     const userDepartments = await this.userDepartmentRepository.findByUser(userId);
-    return userDepartments.some(userDept => 
-      this.path.isAncestorOf(userDept.departmentPath) ||
-      this.path.equals(userDept.departmentPath)
-    );
+    return userDepartments.some((userDept) => this.path.isAncestorOf(userDept.departmentPath) || this.path.equals(userDept.departmentPath));
   }
 
   // 移动到其他部门下
   async moveTo(parentDepartment: Department): Promise<void> {
     if (this.path.isAncestorOf(parentDepartment.path)) {
-      throw new BusinessError('不能将部门移动到其子部门下');
+      throw new BusinessError("不能将部门移动到其子部门下");
     }
 
     const oldPath = this.path;
@@ -220,12 +191,7 @@ export class Department extends AggregateRoot {
     this.path = newPath;
     this.level = parentDepartment.level + 1;
 
-    this.addDomainEvent(new DepartmentMovedEvent(
-      this.id,
-      oldPath,
-      newPath,
-      new Date()
-    ));
+    this.addDomainEvent(new DepartmentMovedEvent(this.id, oldPath, newPath, new Date()));
   }
 }
 
@@ -235,12 +201,12 @@ export class DepartmentPath extends ValueObject {
 
   constructor(path: string) {
     super();
-    this.segments = path.split('.');
+    this.segments = path.split(".");
     this.validate();
   }
 
   static root(): DepartmentPath {
-    return new DepartmentPath('');
+    return new DepartmentPath("");
   }
 
   createChildPath(departmentId: DepartmentId): DepartmentPath {
@@ -254,7 +220,7 @@ export class DepartmentPath extends ValueObject {
     if (this.segments.length >= other.segments.length) {
       return false;
     }
-    
+
     for (let i = 0; i < this.segments.length; i++) {
       if (this.segments[i] !== other.segments[i]) {
         return false;
@@ -271,11 +237,11 @@ export class DepartmentPath extends ValueObject {
     if (this.segments.length <= 1) {
       return null;
     }
-    return new DepartmentPath(this.segments.slice(0, -1).join('.'));
+    return new DepartmentPath(this.segments.slice(0, -1).join("."));
   }
 
   get value(): string {
-    return this.segments.join('.');
+    return this.segments.join(".");
   }
 }
 ```
@@ -301,14 +267,7 @@ export class UserOrganizationAuthorization extends EventSourcedAggregateRoot {
       return; // 已存在
     }
 
-    this.apply(new UserJoinedOrganizationEvent(
-      this.userId,
-      command.organizationId,
-      command.tenantId,
-      command.roles,
-      command.joinedBy,
-      new Date()
-    ));
+    this.apply(new UserJoinedOrganizationEvent(this.userId, command.organizationId, command.tenantId, command.roles, command.joinedBy, new Date()));
   }
 
   // 加入部门
@@ -316,17 +275,10 @@ export class UserOrganizationAuthorization extends EventSourcedAggregateRoot {
     // 验证用户是否在父组织中
     const department = await this.departmentRepository.findById(command.departmentId);
     if (!this.organizationMemberships.has(department.organizationId.value)) {
-      throw new AuthorizationError('用户不在该部门所属的组织中');
+      throw new AuthorizationError("用户不在该部门所属的组织中");
     }
 
-    this.apply(new UserJoinedDepartmentEvent(
-      this.userId,
-      command.departmentId,
-      command.organizationId,
-      command.roles,
-      command.joinedBy,
-      new Date()
-    ));
+    this.apply(new UserJoinedDepartmentEvent(this.userId, command.departmentId, command.organizationId, command.roles, command.joinedBy, new Date()));
   }
 
   // 获取用户数据权限范围
@@ -342,7 +294,7 @@ export class UserOrganizationAuthorization extends EventSourcedAggregateRoot {
     for (const membership of this.departmentMemberships.values()) {
       const department = await this.departmentRepository.findById(membership.departmentId);
       const descendantDepartments = await department.getDescendants();
-      
+
       for (const dept of [department, ...descendantDepartments]) {
         scopes.push(...membership.getDataScopesForDepartment(dept.id));
       }
@@ -360,7 +312,7 @@ export class UserOrganizationAuthorization extends EventSourcedAggregateRoot {
   // 检查部门权限 (包括继承权限)
   async hasDepartmentPermission(departmentId: DepartmentId, permission: Permission): Promise<boolean> {
     const department = await this.departmentRepository.findById(departmentId);
-    
+
     // 检查直接部门权限
     const directMembership = this.departmentMemberships.get(departmentId.value);
     if (directMembership?.hasPermission(permission)) {
@@ -390,12 +342,12 @@ export class UserOrganizationAuthorization extends EventSourcedAggregateRoot {
 
     // 组织级规则
     for (const membership of this.organizationMemberships.values()) {
-      rules.push(...await membership.toCaslRules());
+      rules.push(...(await membership.toCaslRules()));
     }
 
     // 部门级规则 (包括层级继承)
     for (const membership of this.departmentMemberships.values()) {
-      rules.push(...await membership.toCaslRulesWithInheritance());
+      rules.push(...(await membership.toCaslRulesWithInheritance()));
     }
 
     // 数据范围规则
@@ -408,21 +360,12 @@ export class UserOrganizationAuthorization extends EventSourcedAggregateRoot {
 
   // 事件应用器
   private onUserJoinedOrganizationEvent(event: UserJoinedOrganizationEvent): void {
-    const membership = OrganizationMembership.create(
-      event.userId,
-      event.organizationId,
-      event.roles
-    );
+    const membership = OrganizationMembership.create(event.userId, event.organizationId, event.roles);
     this.organizationMemberships.set(event.organizationId.value, membership);
   }
 
   private onUserJoinedDepartmentEvent(event: UserJoinedDepartmentEvent): void {
-    const membership = DepartmentMembership.create(
-      event.userId,
-      event.departmentId,
-      event.organizationId,
-      event.roles
-    );
+    const membership = DepartmentMembership.create(event.userId, event.departmentId, event.organizationId, event.roles);
     this.departmentMemberships.set(event.departmentId.value, membership);
   }
 }
@@ -439,7 +382,7 @@ export class UserJoinedOrganizationEvent extends DomainEvent {
     public readonly tenantId: TenantId,
     public readonly roles: OrganizationRole[],
     public readonly joinedBy: UserId,
-    public readonly joinedAt: Date
+    public readonly joinedAt: Date,
   ) {
     super(userId.value);
   }
@@ -452,7 +395,7 @@ export class UserJoinedDepartmentEvent extends DomainEvent {
     public readonly organizationId: OrganizationId,
     public readonly roles: DepartmentRole[],
     public readonly joinedBy: UserId,
-    public readonly joinedAt: Date
+    public readonly joinedAt: Date,
   ) {
     super(userId.value);
   }
@@ -463,7 +406,7 @@ export class DepartmentMovedEvent extends DomainEvent {
     public readonly departmentId: DepartmentId,
     public readonly oldPath: DepartmentPath,
     public readonly newPath: DepartmentPath,
-    public readonly movedAt: Date
+    public readonly movedAt: Date,
   ) {
     super(departmentId.value);
   }
@@ -474,7 +417,7 @@ export class OrganizationDataScopeChangedEvent extends DomainEvent {
     public readonly organizationId: OrganizationId,
     public readonly dataScopes: DataScope[],
     public readonly changedBy: UserId,
-    public readonly changedAt: Date
+    public readonly changedAt: Date,
   ) {
     super(organizationId.value);
   }
@@ -491,13 +434,10 @@ export class OrganizationDataScopeChangedEvent extends DomainEvent {
 export class JoinOrganizationCommandHandler extends CaslCommandHandler<JoinOrganizationCommand> {
   async execute(command: JoinOrganizationCommand): Promise<void> {
     // 验证操作权限
-    await this.validateCommandPermission(command, 'manage', 'OrganizationMembership');
+    await this.validateCommandPermission(command, "manage", "OrganizationMembership");
 
     // 加载用户组织权限聚合
-    const userAuth = await this.loadAggregate(
-      UserOrganizationAuthorization,
-      `user_org_auth_${command.userId.value}_${command.tenantId.value}`
-    );
+    const userAuth = await this.loadAggregate(UserOrganizationAuthorization, `user_org_auth_${command.userId.value}_${command.tenantId.value}`);
 
     // 执行业务逻辑
     userAuth.joinOrganization(command);
@@ -515,11 +455,11 @@ export class JoinOrganizationCommandHandler extends CaslCommandHandler<JoinOrgan
 export class CreateDepartmentCommandHandler extends CaslCommandHandler<CreateDepartmentCommand> {
   async execute(command: CreateDepartmentCommand): Promise<DepartmentId> {
     // 验证组织权限
-    await this.validateCommandPermission(command, 'create', 'Department');
+    await this.validateCommandPermission(command, "create", "Department");
 
     // 加载组织聚合
     const organization = await this.organizationRepository.findById(command.organizationId);
-    
+
     // 创建部门
     const department = organization.createDepartment({
       name: command.name,
@@ -527,7 +467,7 @@ export class CreateDepartmentCommandHandler extends CaslCommandHandler<CreateDep
       description: command.description,
       parentId: command.parentDepartmentId,
       tenantId: command.securityContext.tenantId,
-      organizationId: command.organizationId
+      organizationId: command.organizationId,
     });
 
     // 保存部门
@@ -545,17 +485,14 @@ export class CreateDepartmentCommandHandler extends CaslCommandHandler<CreateDep
 export class MoveDepartmentCommandHandler extends CaslCommandHandler<MoveDepartmentCommand> {
   async execute(command: MoveDepartmentCommand): Promise<void> {
     // 验证源部门和目标部门权限
-    const ability = await this.abilityService.getAbilityForUser(
-      command.securityContext.userId,
-      command.securityContext.tenantId
-    );
+    const ability = await this.abilityService.getAbilityForUser(command.securityContext.userId, command.securityContext.tenantId);
 
-    if (!ability.can('move', { __typename: 'Department', id: command.departmentId.value })) {
-      throw new AuthorizationError('无权移动该部门');
+    if (!ability.can("move", { __typename: "Department", id: command.departmentId.value })) {
+      throw new AuthorizationError("无权移动该部门");
     }
 
-    if (!ability.can('manage', { __typename: 'Department', id: command.newParentDepartmentId.value })) {
-      throw new AuthorizationError('无权管理目标部门');
+    if (!ability.can("manage", { __typename: "Department", id: command.newParentDepartmentId.value })) {
+      throw new AuthorizationError("无权管理目标部门");
     }
 
     // 加载部门聚合
@@ -579,70 +516,49 @@ export class MoveDepartmentCommandHandler extends CaslCommandHandler<MoveDepartm
 ```typescript
 // 获取用户可访问的组织查询
 @QueryHandler(GetAccessibleOrganizationsQuery)
-export class GetAccessibleOrganizationsQueryHandler 
-  extends CaslQueryHandler<GetAccessibleOrganizationsQuery, Organization[]> {
-  
+export class GetAccessibleOrganizationsQueryHandler extends CaslQueryHandler<GetAccessibleOrganizationsQuery, Organization[]> {
   async execute(query: GetAccessibleOrganizationsQuery): Promise<Organization[]> {
-    const ability = await this.abilityService.getAbilityForUser(
-      query.securityContext.userId,
-      query.securityContext.tenantId
-    );
+    const ability = await this.abilityService.getAbilityForUser(query.securityContext.userId, query.securityContext.tenantId);
 
     // 获取所有组织
-    const allOrganizations = await this.organizationRepository.findByTenant(
-      TenantId.create(query.securityContext.tenantId)
-    );
+    const allOrganizations = await this.organizationRepository.findByTenant(TenantId.create(query.securityContext.tenantId));
 
     // 过滤用户有权限访问的组织
-    return allOrganizations.filter(org => 
-      ability.can('read', { __typename: 'Organization', id: org.id.value })
-    );
+    return allOrganizations.filter((org) => ability.can("read", { __typename: "Organization", id: org.id.value }));
   }
 }
 
 // 获取部门树查询
 @QueryHandler(GetDepartmentTreeQuery)
-export class GetDepartmentTreeQueryHandler 
-  extends CaslQueryHandler<GetDepartmentTreeQuery, DepartmentTree> {
-  
+export class GetDepartmentTreeQueryHandler extends CaslQueryHandler<GetDepartmentTreeQuery, DepartmentTree> {
   async execute(query: GetDepartmentTreeQuery): Promise<DepartmentTree> {
     // 验证组织访问权限
-    await this.validateQueryPermission(query, 'read', {
-      __typename: 'Organization',
-      id: query.organizationId.value
+    await this.validateQueryPermission(query, "read", {
+      __typename: "Organization",
+      id: query.organizationId.value,
     });
 
     // 获取部门树
-    const departmentTree = await this.departmentRepository.findTreeByOrganization(
-      query.organizationId
-    );
+    const departmentTree = await this.departmentRepository.findTreeByOrganization(query.organizationId);
 
     // 应用部门级权限过滤
     return this.filterDepartmentTreeByPermission(departmentTree, query);
   }
 
-  private async filterDepartmentTreeByPermission(
-    tree: DepartmentTree,
-    query: GetDepartmentTreeQuery
-  ): Promise<DepartmentTree> {
-    const ability = await this.abilityService.getAbilityForUser(
-      query.securityContext.userId,
-      query.securityContext.tenantId
-    );
+  private async filterDepartmentTreeByPermission(tree: DepartmentTree, query: GetDepartmentTreeQuery): Promise<DepartmentTree> {
+    const ability = await this.abilityService.getAbilityForUser(query.securityContext.userId, query.securityContext.tenantId);
 
     // 递归过滤部门树
     const filterNode = (node: DepartmentTreeNode): DepartmentTreeNode | null => {
-      if (!ability.can('read', { __typename: 'Department', id: node.department.id.value })) {
+      if (!ability.can("read", { __typename: "Department", id: node.department.id.value })) {
         return null;
       }
 
-      const filteredChildren = node.children
-        .map(filterNode)
-        .filter((child): child is DepartmentTreeNode => child !== null);
+      const filteredChildren = node.children.map(filterNode).filter((child): child is DepartmentTreeNode => child !== null);
 
       return {
         ...node,
-        children: filteredChildren
+        children: filteredChildren,
       };
     };
 
@@ -652,30 +568,20 @@ export class GetDepartmentTreeQueryHandler
 
 // 获取用户数据权限范围查询
 @QueryHandler(GetUserDataScopesQuery)
-export class GetUserDataScopesQueryHandler 
-  extends CaslQueryHandler<GetUserDataScopesQuery, DataScope[]> {
-  
+export class GetUserDataScopesQueryHandler extends CaslQueryHandler<GetUserDataScopesQuery, DataScope[]> {
   async execute(query: GetUserDataScopesQuery): Promise<DataScope[]> {
     // 加载用户组织权限聚合
-    const userAuth = await this.loadUserAuthorization(
-      query.userId,
-      query.tenantId
-    );
+    const userAuth = await this.loadUserAuthorization(query.userId, query.tenantId);
 
     // 获取数据权限范围
     return userAuth.getDataScopes();
   }
 
-  private async loadUserAuthorization(
-    userId: UserId,
-    tenantId: TenantId
-  ): Promise<UserOrganizationAuthorization> {
-    const events = await this.eventStore.getEvents(
-      `user_org_auth_${userId.value}_${tenantId.value}`
-    );
+  private async loadUserAuthorization(userId: UserId, tenantId: TenantId): Promise<UserOrganizationAuthorization> {
+    const events = await this.eventStore.getEvents(`user_org_auth_${userId.value}_${tenantId.value}`);
 
     if (events.length === 0) {
-      throw new UserAuthorizationNotFoundError('用户组织权限未找到');
+      throw new UserAuthorizationNotFoundError("用户组织权限未找到");
     }
 
     return UserOrganizationAuthorization.reconstitute(events);
@@ -694,71 +600,43 @@ export class DepartmentMovedEventHandler implements IEventHandler<DepartmentMove
   constructor(
     private readonly userAuthProjection: UserOrganizationAuthorizationProjection,
     private readonly departmentTreeProjection: DepartmentTreeProjection,
-    private readonly abilityService: CaslAbilityService
+    private readonly abilityService: CaslAbilityService,
   ) {}
 
   async handle(event: DepartmentMovedEvent): Promise<void> {
     // 1. 更新部门树投影
-    await this.departmentTreeProjection.updateDepartmentPath(
-      event.departmentId,
-      event.oldPath,
-      event.newPath
-    );
+    await this.departmentTreeProjection.updateDepartmentPath(event.departmentId, event.oldPath, event.newPath);
 
     // 2. 更新用户权限投影
-    await this.userAuthProjection.updateDepartmentPaths(
-      event.departmentId,
-      event.newPath
-    );
+    await this.userAuthProjection.updateDepartmentPaths(event.departmentId, event.newPath);
 
     // 3. 清除受影响用户的能力缓存
-    const affectedUsers = await this.userAuthProjection.getUsersInDepartmentTree(
-      event.departmentId
-    );
+    const affectedUsers = await this.userAuthProjection.getUsersInDepartmentTree(event.departmentId);
 
-    await Promise.all(
-      affectedUsers.map(user => 
-        this.abilityService.clearUserCache(user.id.value, user.tenantId.value)
-      )
-    );
+    await Promise.all(affectedUsers.map((user) => this.abilityService.clearUserCache(user.id.value, user.tenantId.value)));
 
     // 4. 发布权限重建事件
-    await this.eventBus.publish(new PermissionsRebuildRequestedEvent(
-      event.departmentId.tenantId,
-      'system',
-      { 
-        scope: 'department_tree',
-        departmentId: event.departmentId.value 
-      }
-    ));
+    await this.eventBus.publish(
+      new PermissionsRebuildRequestedEvent(event.departmentId.tenantId, "system", {
+        scope: "department_tree",
+        departmentId: event.departmentId.value,
+      }),
+    );
   }
 }
 
 // 用户加入组织事件处理器
 @EventHandler(UserJoinedOrganizationEvent)
-export class UserJoinedOrganizationEventHandler 
-  implements IEventHandler<UserJoinedOrganizationEvent> {
-  
+export class UserJoinedOrganizationEventHandler implements IEventHandler<UserJoinedOrganizationEvent> {
   async handle(event: UserJoinedOrganizationEvent): Promise<void> {
     // 更新用户组织成员投影
-    await this.userOrganizationProjection.addUserToOrganization(
-      event.userId,
-      event.organizationId,
-      event.roles
-    );
+    await this.userOrganizationProjection.addUserToOrganization(event.userId, event.organizationId, event.roles);
 
     // 清除用户能力缓存
-    await this.abilityService.clearUserCache(
-      event.userId.value,
-      event.tenantId.value
-    );
+    await this.abilityService.clearUserCache(event.userId.value, event.tenantId.value);
 
     // 发送通知
-    await this.notificationService.sendOrganizationJoinNotification(
-      event.userId,
-      event.organizationId,
-      event.joinedBy
-    );
+    await this.notificationService.sendOrganizationJoinNotification(event.userId, event.organizationId, event.joinedBy);
   }
 }
 ```
@@ -771,15 +649,12 @@ export class UserJoinedOrganizationEventHandler
 export class UserOrganizationAuthorizationProjection {
   constructor(
     private readonly em: EntityManager,
-    private readonly eventStore: EventStore
+    private readonly eventStore: EventStore,
   ) {}
 
   @ProjectionHandler(UserJoinedOrganizationEvent)
   async onUserJoinedOrganization(event: UserJoinedOrganizationEvent): Promise<void> {
-    const userOrg = await this.getOrCreateUserOrganization(
-      event.userId,
-      event.organizationId
-    );
+    const userOrg = await this.getOrCreateUserOrganization(event.userId, event.organizationId);
 
     userOrg.addRoles(event.roles);
     userOrg.joinedAt = event.joinedAt;
@@ -790,10 +665,7 @@ export class UserOrganizationAuthorizationProjection {
 
   @ProjectionHandler(UserJoinedDepartmentEvent)
   async onUserJoinedDepartment(event: UserJoinedDepartmentEvent): Promise<void> {
-    const userDept = await this.getOrCreateUserDepartment(
-      event.userId,
-      event.departmentId
-    );
+    const userDept = await this.getOrCreateUserDepartment(event.userId, event.departmentId);
 
     userDept.addRoles(event.roles);
     userDept.joinedAt = event.joinedAt;
@@ -806,29 +678,27 @@ export class UserOrganizationAuthorizationProjection {
   async getUserOrganizationPermissions(userId: UserId, tenantId: TenantId): Promise<OrganizationPermission[]> {
     const userOrgs = await this.em.find(UserOrganizationEntity, {
       userId: userId.value,
-      tenantId: tenantId.value
+      tenantId: tenantId.value,
     });
 
-    return userOrgs.map(org => org.toPermission());
+    return userOrgs.map((org) => org.toPermission());
   }
 
   // 获取用户在部门树的权限
   async getUserDepartmentPermissions(userId: UserId, tenantId: TenantId): Promise<DepartmentPermission[]> {
     const userDepts = await this.em.find(UserDepartmentEntity, {
       userId: userId.value,
-      tenantId: tenantId.value
+      tenantId: tenantId.value,
     });
 
     const permissions: DepartmentPermission[] = [];
 
     for (const userDept of userDepts) {
-      const department = await this.departmentRepository.findById(
-        DepartmentId.create(userDept.departmentId)
-      );
+      const department = await this.departmentRepository.findById(DepartmentId.create(userDept.departmentId));
 
       // 包括部门及其所有子部门的权限
       const descendants = await department.getDescendants();
-      
+
       for (const dept of [department, ...descendants]) {
         permissions.push(...userDept.toPermissionsForDepartment(dept.id));
       }
@@ -846,7 +716,7 @@ export class DepartmentTreeProjection {
   @ProjectionHandler(DepartmentCreatedEvent)
   async onDepartmentCreated(event: DepartmentCreatedEvent): Promise<void> {
     const department = await this.departmentRepository.findById(event.departmentId);
-    
+
     const treeNode = new DepartmentTreeNodeEntity({
       departmentId: department.id.value,
       organizationId: department.organizationId.value,
@@ -854,7 +724,7 @@ export class DepartmentTreeProjection {
       path: department.path.value,
       level: department.level,
       name: department.name,
-      code: department.code
+      code: department.code,
     });
 
     await this.em.persistAndFlush(treeNode);
@@ -863,53 +733,49 @@ export class DepartmentTreeProjection {
   @ProjectionHandler(DepartmentMovedEvent)
   async onDepartmentMoved(event: DepartmentMovedEvent): Promise<void> {
     // 更新部门路径
-    await this.em.nativeUpdate(
-      DepartmentTreeNodeEntity,
-      { departmentId: event.departmentId.value },
-      { path: event.newPath.value }
-    );
+    await this.em.nativeUpdate(DepartmentTreeNodeEntity, { departmentId: event.departmentId.value }, { path: event.newPath.value });
 
     // 更新所有子部门的路径
     const oldPathPrefix = `${event.oldPath.value}.`;
     const newPathPrefix = `${event.newPath.value}.`;
 
-    await this.em.nativeUpdate(
-      DepartmentTreeNodeEntity,
-      { path: { $like: `${oldPathPrefix}%` } },
-      { path: { $replace: [oldPathPrefix, newPathPrefix] } }
-    );
+    await this.em.nativeUpdate(DepartmentTreeNodeEntity, { path: { $like: `${oldPathPrefix}%` } }, { path: { $replace: [oldPathPrefix, newPathPrefix] } });
   }
 
   // 获取组织部门树
   async getOrganizationDepartmentTree(organizationId: OrganizationId): Promise<DepartmentTree> {
-    const nodes = await this.em.find(DepartmentTreeNodeEntity, {
-      organizationId: organizationId.value
-    }, { orderBy: { path: 'ASC' } });
+    const nodes = await this.em.find(
+      DepartmentTreeNodeEntity,
+      {
+        organizationId: organizationId.value,
+      },
+      { orderBy: { path: "ASC" } },
+    );
 
     return this.buildTree(nodes);
   }
 
   private buildTree(nodes: DepartmentTreeNodeEntity[]): DepartmentTree {
-    const nodeMap = new Map(nodes.map(node => [node.departmentId, node]));
-    const rootNodes = nodes.filter(node => node.level === 0);
+    const nodeMap = new Map(nodes.map((node) => [node.departmentId, node]));
+    const rootNodes = nodes.filter((node) => node.level === 0);
 
     const buildTreeNode = (node: DepartmentTreeNodeEntity): DepartmentTreeNode => {
-      const children = nodes.filter(n => n.parentId === node.departmentId);
-      
+      const children = nodes.filter((n) => n.parentId === node.departmentId);
+
       return {
         department: {
           id: DepartmentId.create(node.departmentId),
           name: node.name,
           code: node.code,
           path: new DepartmentPath(node.path),
-          level: node.level
+          level: node.level,
         },
-        children: children.map(buildTreeNode)
+        children: children.map(buildTreeNode),
       };
     };
 
     return {
-      root: rootNodes.map(buildTreeNode)
+      root: rootNodes.map(buildTreeNode),
     };
   }
 }
@@ -925,7 +791,7 @@ export class OrganizationAwareCaslAbilityFactory extends DomainCaslAbilityFactor
   async createForUser(user: User, tenant: Tenant): Promise<AppAbility> {
     const baseRules = await super.createForUser(user, tenant);
     const orgRules = await this.buildOrganizationRules(user, tenant);
-    
+
     return createMongoAbility<AppAbility>([...baseRules, ...orgRules]);
   }
 
@@ -943,22 +809,22 @@ export class OrganizationAwareCaslAbilityFactory extends DomainCaslAbilityFactor
         subject: permission.subject,
         conditions: {
           ...permission.conditions,
-          organizationId: { $in: permission.organizationIds }
-        }
+          organizationId: { $in: permission.organizationIds },
+        },
       });
     }
 
     // 部门级规则 (包括层级)
     for (const permission of deptPermissions) {
       const departmentConditions = await this.buildDepartmentConditions(permission);
-      
+
       rules.push({
         action: permission.action,
         subject: permission.subject,
         conditions: {
           ...permission.conditions,
-          $or: departmentConditions
-        }
+          $or: departmentConditions,
+        },
       });
     }
 
@@ -970,16 +836,16 @@ export class OrganizationAwareCaslAbilityFactory extends DomainCaslAbilityFactor
 
     for (const deptId of permission.departmentIds) {
       const department = await this.departmentRepository.findById(deptId);
-      
+
       if (permission.includeDescendants) {
         // 包括所有子部门
         conditions.push({
-          departmentPath: { $like: `${department.path.value}%` }
+          departmentPath: { $like: `${department.path.value}%` },
         });
       } else {
         // 仅当前部门
         conditions.push({
-          departmentId: deptId.value
+          departmentId: deptId.value,
         });
       }
     }
@@ -994,115 +860,81 @@ export class OrganizationAwareCaslAbilityFactory extends DomainCaslAbilityFactor
 ### 6.1 组织权限控制器
 
 ```typescript
-@Controller('organizations')
+@Controller("organizations")
 @UseGuards(MultiTenantAuthGuard, CaslGuard)
 export class OrganizationController {
   @Post()
-  @CheckPolicies('create', 'Organization')
-  async createOrganization(
-    @SecurityContext() context: SecurityContext,
-    @Body() createDto: CreateOrganizationRequestDto
-  ): Promise<ApiResponse<OrganizationResponseDto>> {
+  @CheckPolicies("create", "Organization")
+  async createOrganization(@SecurityContext() context: SecurityContext, @Body() createDto: CreateOrganizationRequestDto): Promise<ApiResponse<OrganizationResponseDto>> {
     const command = new CreateOrganizationCommand(createDto, context);
     const organization = await this.commandBus.execute(command);
 
-    return ApiResponse.success(
-      this.toOrganizationResponseDto(organization),
-      '组织创建成功'
-    );
+    return ApiResponse.success(this.toOrganizationResponseDto(organization), "组织创建成功");
   }
 
   @Get()
-  @CheckPolicies('read', 'Organization')
-  async getOrganizations(
-    @SecurityContext() context: SecurityContext,
-    @Query() queryDto: OrganizationQueryRequestDto
-  ): Promise<ApiResponse<OrganizationResponseDto[]>> {
+  @CheckPolicies("read", "Organization")
+  async getOrganizations(@SecurityContext() context: SecurityContext, @Query() queryDto: OrganizationQueryRequestDto): Promise<ApiResponse<OrganizationResponseDto[]>> {
     const query = new GetAccessibleOrganizationsQuery(queryDto, context);
     const organizations = await this.queryBus.execute(query);
 
-    return ApiResponse.success(
-      organizations.map(org => this.toOrganizationResponseDto(org))
-    );
+    return ApiResponse.success(organizations.map((org) => this.toOrganizationResponseDto(org)));
   }
 
-  @Post(':id/departments')
-  @CheckPolicies('create', 'Department')
-  async createDepartment(
-    @SecurityContext() context: SecurityContext,
-    @Param('id') organizationId: string,
-    @Body() createDto: CreateDepartmentRequestDto
-  ): Promise<ApiResponse<DepartmentResponseDto>> {
-    const command = new CreateDepartmentCommand({
-      ...createDto,
-      organizationId: OrganizationId.create(organizationId)
-    }, context);
+  @Post(":id/departments")
+  @CheckPolicies("create", "Department")
+  async createDepartment(@SecurityContext() context: SecurityContext, @Param("id") organizationId: string, @Body() createDto: CreateDepartmentRequestDto): Promise<ApiResponse<DepartmentResponseDto>> {
+    const command = new CreateDepartmentCommand(
+      {
+        ...createDto,
+        organizationId: OrganizationId.create(organizationId),
+      },
+      context,
+    );
 
     const departmentId = await this.commandBus.execute(command);
 
-    return ApiResponse.success(
-      { id: departmentId.value },
-      '部门创建成功'
-    );
+    return ApiResponse.success({ id: departmentId.value }, "部门创建成功");
   }
 
-  @Get(':id/departments/tree')
-  @CheckPolicies('read', 'Department')
-  async getDepartmentTree(
-    @SecurityContext() context: SecurityContext,
-    @Param('id') organizationId: string
-  ): Promise<ApiResponse<DepartmentTreeResponseDto>> {
-    const query = new GetDepartmentTreeQuery(
-      OrganizationId.create(organizationId),
-      context
-    );
+  @Get(":id/departments/tree")
+  @CheckPolicies("read", "Department")
+  async getDepartmentTree(@SecurityContext() context: SecurityContext, @Param("id") organizationId: string): Promise<ApiResponse<DepartmentTreeResponseDto>> {
+    const query = new GetDepartmentTreeQuery(OrganizationId.create(organizationId), context);
 
     const departmentTree = await this.queryBus.execute(query);
 
-    return ApiResponse.success(
-      this.toDepartmentTreeResponseDto(departmentTree)
-    );
+    return ApiResponse.success(this.toDepartmentTreeResponseDto(departmentTree));
   }
 }
 
-@Controller('departments')
+@Controller("departments")
 @UseGuards(MultiTenantAuthGuard, CaslGuard)
 export class DepartmentController {
-  @Patch(':id/move')
-  @CheckResourcePolicy('move', 'id')
-  async moveDepartment(
-    @SecurityContext() context: SecurityContext,
-    @Param('id') departmentId: string,
-    @Body() moveDto: MoveDepartmentRequestDto
-  ): Promise<ApiResponse<void>> {
-    const command = new MoveDepartmentCommand({
-      departmentId: DepartmentId.create(departmentId),
-      newParentDepartmentId: DepartmentId.create(moveDto.newParentId)
-    }, context);
+  @Patch(":id/move")
+  @CheckResourcePolicy("move", "id")
+  async moveDepartment(@SecurityContext() context: SecurityContext, @Param("id") departmentId: string, @Body() moveDto: MoveDepartmentRequestDto): Promise<ApiResponse<void>> {
+    const command = new MoveDepartmentCommand(
+      {
+        departmentId: DepartmentId.create(departmentId),
+        newParentDepartmentId: DepartmentId.create(moveDto.newParentId),
+      },
+      context,
+    );
 
     await this.commandBus.execute(command);
 
-    return ApiResponse.empty('部门移动成功');
+    return ApiResponse.empty("部门移动成功");
   }
 
-  @Get(':id/users')
-  @CheckResourcePolicy('read', 'id')
-  async getDepartmentUsers(
-    @SecurityContext() context: SecurityContext,
-    @Param('id') departmentId: string,
-    @Query() queryDto: DepartmentUsersQueryRequestDto
-  ): Promise<ApiResponse<UserResponseDto[]>> {
-    const query = new GetDepartmentUsersQuery(
-      DepartmentId.create(departmentId),
-      queryDto,
-      context
-    );
+  @Get(":id/users")
+  @CheckResourcePolicy("read", "id")
+  async getDepartmentUsers(@SecurityContext() context: SecurityContext, @Param("id") departmentId: string, @Query() queryDto: DepartmentUsersQueryRequestDto): Promise<ApiResponse<UserResponseDto[]>> {
+    const query = new GetDepartmentUsersQuery(DepartmentId.create(departmentId), queryDto, context);
 
     const users = await this.queryBus.execute(query);
 
-    return ApiResponse.success(
-      users.map(user => this.toUserResponseDto(user))
-    );
+    return ApiResponse.success(users.map((user) => this.toUserResponseDto(user)));
   }
 }
 ```
@@ -1134,4 +966,5 @@ export class DepartmentController {
 这套设计为企业级多租户应用提供了强大的组织权限管理能力，完美支持复杂的组织架构和精细的数据权限控制。
 
 ---
-*文档版本: 5.0 | 最后更新: 2024-11-XX | 特性: 组织-部门层级权限 + CASL + CQRS + ES + EDA*
+
+_文档版本: 5.0 | 最后更新: 2024-11-XX | 特性: 组织-部门层级权限 + CASL + CQRS + ES + EDA_

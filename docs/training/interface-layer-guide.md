@@ -9,6 +9,7 @@
 ### 1.1 接口层定位
 
 **接口层**是系统的**对外门户**和**协议适配器**，在 Clean Architecture 中处于最外层，负责：
+
 - 接收和验证外部输入
 - 转换外部 DTO 为内部命令/查询
 - 调用应用层用例
@@ -58,92 +59,74 @@ interfaces/
 
 ```typescript
 // 订单控制器
-@ApiTags('orders')
-@Controller('orders')
+@ApiTags("orders")
+@Controller("orders")
 @UseInterceptors(LoggingInterceptor, TransformInterceptor)
 @UseFilters(GlobalExceptionFilter, BusinessExceptionFilter)
 export class OrderController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
-    private readonly orderAssembler: OrderAssembler
+    private readonly orderAssembler: OrderAssembler,
   ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @ApiOperation({ summary: '创建订单', description: '创建新的客户订单' })
-  @ApiResponse({ 
-    status: 201, 
-    description: '订单创建成功',
-    type: OrderResponseDto
+  @ApiOperation({ summary: "创建订单", description: "创建新的客户订单" })
+  @ApiResponse({
+    status: 201,
+    description: "订单创建成功",
+    type: OrderResponseDto,
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: '请求参数错误',
-    type: ErrorResponseDto
+  @ApiResponse({
+    status: 400,
+    description: "请求参数错误",
+    type: ErrorResponseDto,
   })
-  async createOrder(
-    @CurrentUser() user: CurrentUserDto,
-    @Body() createOrderDto: CreateOrderRequestDto
-  ): Promise<ApiResponse<OrderResponseDto>> {
+  async createOrder(@CurrentUser() user: CurrentUserDto, @Body() createOrderDto: CreateOrderRequestDto): Promise<ApiResponse<OrderResponseDto>> {
     // 转换为应用层命令
     const command = this.orderAssembler.toCreateOrderCommand(createOrderDto, user.id);
-    
+
     // 发送命令到应用层
     const result = await this.commandBus.execute(command);
-    
+
     // 转换为响应 DTO
     const response = this.orderAssembler.toOrderResponseDto(result);
-    
-    return ApiResponse.success(response, '订单创建成功');
+
+    return ApiResponse.success(response, "订单创建成功");
   }
 
-  @Get(':id')
+  @Get(":id")
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: '获取订单详情' })
-  @ApiParam({ name: 'id', description: '订单ID' })
-  async getOrder(
-    @CurrentUser() user: CurrentUserDto,
-    @Param('id') orderId: string
-  ): Promise<ApiResponse<OrderDetailResponseDto>> {
+  @ApiOperation({ summary: "获取订单详情" })
+  @ApiParam({ name: "id", description: "订单ID" })
+  async getOrder(@CurrentUser() user: CurrentUserDto, @Param("id") orderId: string): Promise<ApiResponse<OrderDetailResponseDto>> {
     const query = new GetOrderDetailQuery(orderId, user.id);
     const order = await this.queryBus.execute(query);
-    
+
     const response = this.orderAssembler.toOrderDetailResponseDto(order);
     return ApiResponse.success(response);
   }
 
-  @Post(':id/cancel')
+  @Post(":id/cancel")
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @ApiOperation({ summary: '取消订单' })
-  async cancelOrder(
-    @CurrentUser() user: CurrentUserDto,
-    @Param('id') orderId: string,
-    @Body() cancelOrderDto: CancelOrderRequestDto
-  ): Promise<ApiResponse<void>> {
-    const command = new CancelOrderCommand(
-      orderId,
-      user.id,
-      cancelOrderDto.reason,
-      cancelOrderDto.cancellationType
-    );
-    
+  @ApiOperation({ summary: "取消订单" })
+  async cancelOrder(@CurrentUser() user: CurrentUserDto, @Param("id") orderId: string, @Body() cancelOrderDto: CancelOrderRequestDto): Promise<ApiResponse<void>> {
+    const command = new CancelOrderCommand(orderId, user.id, cancelOrderDto.reason, cancelOrderDto.cancellationType);
+
     await this.commandBus.execute(command);
-    
-    return ApiResponse.success(null, '订单取消成功');
+
+    return ApiResponse.success(null, "订单取消成功");
   }
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: '查询订单列表' })
-  async getOrders(
-    @CurrentUser() user: CurrentUserDto,
-    @Query() queryDto: OrderQueryRequestDto
-  ): Promise<ApiResponse<PaginatedResponse<OrderResponseDto>>> {
+  @ApiOperation({ summary: "查询订单列表" })
+  async getOrders(@CurrentUser() user: CurrentUserDto, @Query() queryDto: OrderQueryRequestDto): Promise<ApiResponse<PaginatedResponse<OrderResponseDto>>> {
     const query = this.orderAssembler.toOrderQuery(queryDto, user.id);
     const paginatedResult = await this.queryBus.execute(query);
-    
+
     const response = this.orderAssembler.toPaginatedOrderResponse(paginatedResult);
     return ApiResponse.success(response);
   }
@@ -155,27 +138,27 @@ export class OrderController {
 ```typescript
 // 请求 DTO
 export class CreateOrderRequestDto {
-  @ApiProperty({ description: '订单项列表', type: [OrderItemRequestDto] })
+  @ApiProperty({ description: "订单项列表", type: [OrderItemRequestDto] })
   @IsNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => OrderItemRequestDto)
   items: OrderItemRequestDto[];
 
-  @ApiProperty({ description: '收货地址ID' })
+  @ApiProperty({ description: "收货地址ID" })
   @IsUUID()
   shippingAddressId: string;
 
-  @ApiProperty({ description: '支付方式', enum: PaymentMethod })
+  @ApiProperty({ description: "支付方式", enum: PaymentMethod })
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
 
-  @ApiProperty({ description: '优惠码', required: false })
+  @ApiProperty({ description: "优惠码", required: false })
   @IsOptional()
   @IsString()
   @MaxLength(20)
   promoCode?: string;
 
-  @ApiProperty({ description: '客户备注', required: false })
+  @ApiProperty({ description: "客户备注", required: false })
   @IsOptional()
   @IsString()
   @MaxLength(500)
@@ -183,17 +166,17 @@ export class CreateOrderRequestDto {
 }
 
 export class OrderItemRequestDto {
-  @ApiProperty({ description: '商品ID' })
+  @ApiProperty({ description: "商品ID" })
   @IsUUID()
   productId: string;
 
-  @ApiProperty({ description: '购买数量' })
+  @ApiProperty({ description: "购买数量" })
   @IsInt()
   @Min(1)
   @Max(999)
   quantity: number;
 
-  @ApiProperty({ description: '商品规格', required: false })
+  @ApiProperty({ description: "商品规格", required: false })
   @IsOptional()
   @IsObject()
   specifications?: Record<string, any>;
@@ -201,39 +184,39 @@ export class OrderItemRequestDto {
 
 // 响应 DTO
 export class OrderResponseDto {
-  @ApiProperty({ description: '订单ID' })
+  @ApiProperty({ description: "订单ID" })
   id: string;
 
-  @ApiProperty({ description: '订单号' })
+  @ApiProperty({ description: "订单号" })
   orderNumber: string;
 
-  @ApiProperty({ description: '订单状态', enum: OrderStatus })
+  @ApiProperty({ description: "订单状态", enum: OrderStatus })
   status: OrderStatus;
 
-  @ApiProperty({ description: '订单总金额' })
+  @ApiProperty({ description: "订单总金额" })
   totalAmount: number;
 
-  @ApiProperty({ description: '货币类型' })
+  @ApiProperty({ description: "货币类型" })
   currency: string;
 
-  @ApiProperty({ description: '创建时间' })
+  @ApiProperty({ description: "创建时间" })
   createdAt: Date;
 
-  @ApiProperty({ description: '订单项', type: [OrderItemResponseDto] })
+  @ApiProperty({ description: "订单项", type: [OrderItemResponseDto] })
   items: OrderItemResponseDto[];
 }
 
 export class OrderDetailResponseDto extends OrderResponseDto {
-  @ApiProperty({ description: '收货地址' })
+  @ApiProperty({ description: "收货地址" })
   shippingAddress: AddressResponseDto;
 
-  @ApiProperty({ description: '支付信息' })
+  @ApiProperty({ description: "支付信息" })
   paymentInfo: PaymentInfoResponseDto;
 
-  @ApiProperty({ description: '物流信息' })
+  @ApiProperty({ description: "物流信息" })
   shippingInfo: ShippingInfoResponseDto;
 
-  @ApiProperty({ description: '订单操作日志' })
+  @ApiProperty({ description: "订单操作日志" })
   activityLog: OrderActivityResponseDto[];
 }
 ```
@@ -245,7 +228,7 @@ export class OrderDetailResponseDto extends OrderResponseDto {
 export class OrderAssembler {
   constructor(
     private readonly validationService: ValidationService,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   toCreateOrderCommand(dto: CreateOrderRequestDto, customerId: string): CreateOrderCommand {
@@ -254,16 +237,16 @@ export class OrderAssembler {
 
     return new CreateOrderCommand({
       customerId,
-      items: dto.items.map(item => ({
+      items: dto.items.map((item) => ({
         productId: ProductId.create(item.productId),
         quantity: item.quantity,
-        specifications: item.specifications
+        specifications: item.specifications,
       })),
       shippingAddressId: ShippingAddressId.create(dto.shippingAddressId),
       paymentMethod: dto.paymentMethod,
       promoCode: dto.promoCode,
       customerNote: dto.customerNote,
-      requestedAt: new Date()
+      requestedAt: new Date(),
     });
   }
 
@@ -275,21 +258,19 @@ export class OrderAssembler {
       totalAmount: order.totalAmount.amount,
       currency: order.totalAmount.currency,
       createdAt: order.createdAt.toJSDate(),
-      items: order.items.map(item => this.toOrderItemResponseDto(item))
+      items: order.items.map((item) => this.toOrderItemResponseDto(item)),
     };
   }
 
   toOrderDetailResponseDto(order: Order): OrderDetailResponseDto {
     const baseResponse = this.toOrderResponseDto(order);
-    
+
     return {
       ...baseResponse,
       shippingAddress: this.toAddressResponseDto(order.shippingAddress),
       paymentInfo: this.toPaymentInfoResponseDto(order.payment),
       shippingInfo: order.shipping ? this.toShippingInfoResponseDto(order.shipping) : null,
-      activityLog: order.activityLog.map(activity => 
-        this.toOrderActivityResponseDto(activity)
-      )
+      activityLog: order.activityLog.map((activity) => this.toOrderActivityResponseDto(activity)),
     };
   }
 
@@ -297,30 +278,31 @@ export class OrderAssembler {
     return new OrderQuery({
       customerId,
       status: dto.status,
-      dateRange: dto.startDate && dto.endDate ? {
-        start: new Date(dto.startDate),
-        end: new Date(dto.endDate)
-      } : undefined,
+      dateRange:
+        dto.startDate && dto.endDate
+          ? {
+              start: new Date(dto.startDate),
+              end: new Date(dto.endDate),
+            }
+          : undefined,
       pagination: {
         page: dto.page || 1,
         pageSize: dto.pageSize || 20,
         sortBy: dto.sortBy,
-        sortOrder: dto.sortOrder
-      }
+        sortOrder: dto.sortOrder,
+      },
     });
   }
 
-  toPaginatedOrderResponse(
-    paginatedResult: Paginated<Order>
-  ): PaginatedResponse<OrderResponseDto> {
+  toPaginatedOrderResponse(paginatedResult: Paginated<Order>): PaginatedResponse<OrderResponseDto> {
     return {
-      items: paginatedResult.items.map(order => this.toOrderResponseDto(order)),
+      items: paginatedResult.items.map((order) => this.toOrderResponseDto(order)),
       pagination: {
         page: paginatedResult.page,
         pageSize: paginatedResult.pageSize,
         total: paginatedResult.total,
-        totalPages: paginatedResult.totalPages
-      }
+        totalPages: paginatedResult.totalPages,
+      },
     };
   }
 
@@ -332,7 +314,7 @@ export class OrderAssembler {
       quantity: item.quantity,
       subtotal: item.subtotal.amount,
       imageUrl: item.imageUrl,
-      specifications: item.specifications
+      specifications: item.specifications,
     };
   }
 }
@@ -344,25 +326,16 @@ export class OrderAssembler {
 
 ```typescript
 // 当前用户装饰器
-export const CurrentUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): CurrentUserDto => {
-    const request = ctx.switchToHttp().getRequest();
-    return request.user;
-  }
-);
+export const CurrentUser = createParamDecorator((data: unknown, ctx: ExecutionContext): CurrentUserDto => {
+  const request = ctx.switchToHttp().getRequest();
+  return request.user;
+});
 
 // 权限装饰器
-export const Permissions = (...permissions: string[]) => 
-  SetMetadata('permissions', permissions);
+export const Permissions = (...permissions: string[]) => SetMetadata("permissions", permissions);
 
 // 资源所有权装饰器
-export const ResourceOwnership = (resourceType: string, idParam: string = 'id') => 
-  applyDecorators(
-    Param('id', ParseUUIDPipe),
-    UseGuards(ResourceOwnershipGuard),
-    SetMetadata('resourceType', resourceType),
-    SetMetadata('idParam', idParam)
-  );
+export const ResourceOwnership = (resourceType: string, idParam: string = "id") => applyDecorators(Param("id", ParseUUIDPipe), UseGuards(ResourceOwnershipGuard), SetMetadata("resourceType", resourceType), SetMetadata("idParam", idParam));
 ```
 
 ### 4.2 守卫实现
@@ -372,14 +345,11 @@ export const ResourceOwnership = (resourceType: string, idParam: string = 'id') 
 export class PermissionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly permissionService: PermissionService
+    private readonly permissionService: PermissionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermissions = this.reflector.get<string[]>(
-      'permissions',
-      context.getHandler()
-    );
+    const requiredPermissions = this.reflector.get<string[]>("permissions", context.getHandler());
 
     if (!requiredPermissions) {
       return true;
@@ -389,16 +359,13 @@ export class PermissionGuard implements CanActivate {
     const user = request.user;
 
     if (!user) {
-      throw new UnauthorizedException('用户未认证');
+      throw new UnauthorizedException("用户未认证");
     }
 
-    const hasPermission = await this.permissionService.hasPermissions(
-      user.id,
-      requiredPermissions
-    );
+    const hasPermission = await this.permissionService.hasPermissions(user.id, requiredPermissions);
 
     if (!hasPermission) {
-      throw new ForbiddenException('权限不足');
+      throw new ForbiddenException("权限不足");
     }
 
     return true;
@@ -409,12 +376,12 @@ export class PermissionGuard implements CanActivate {
 export class ResourceOwnershipGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly ownershipService: ResourceOwnershipService
+    private readonly ownershipService: ResourceOwnershipService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const resourceType = this.reflector.get<string>('resourceType', context.getHandler());
-    const idParam = this.reflector.get<string>('idParam', context.getHandler());
+    const resourceType = this.reflector.get<string>("resourceType", context.getHandler());
+    const idParam = this.reflector.get<string>("idParam", context.getHandler());
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
@@ -424,14 +391,10 @@ export class ResourceOwnershipGuard implements CanActivate {
       return false;
     }
 
-    const isOwner = await this.ownershipService.isResourceOwner(
-      user.id,
-      resourceType,
-      resourceId
-    );
+    const isOwner = await this.ownershipService.isResourceOwner(user.id, resourceType, resourceId);
 
     if (!isOwner) {
-      throw new ForbiddenException('无权访问该资源');
+      throw new ForbiddenException("无权访问该资源");
     }
 
     return true;
@@ -466,18 +429,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       // NestJS HTTP 异常
       status = exception.getStatus();
       message = exception.message;
-      code = 'HTTP_ERROR';
+      code = "HTTP_ERROR";
     } else if (exception instanceof Error) {
       // 其他 JavaScript 错误
       status = HttpStatus.INTERNAL_SERVER_ERROR;
-      message = '服务器内部错误';
-      code = 'INTERNAL_SERVER_ERROR';
+      message = "服务器内部错误";
+      code = "INTERNAL_SERVER_ERROR";
       this.logger.error(`Unhandled error: ${exception.message}`, exception.stack);
     } else {
       // 未知错误
       status = HttpStatus.INTERNAL_SERVER_ERROR;
-      message = '未知服务器错误';
-      code = 'UNKNOWN_ERROR';
+      message = "未知服务器错误";
+      code = "UNKNOWN_ERROR";
     }
 
     const errorResponse: ErrorResponseDto = {
@@ -488,8 +451,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         details,
         path: request.url,
         timestamp: new Date().toISOString(),
-        requestId: request.headers['x-request-id'] || ulid()
-      }
+        requestId: request.headers["x-request-id"] || ulid(),
+      },
     };
 
     // 记录错误日志
@@ -503,20 +466,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       requestId: errorResponse.error.requestId,
       method: request.method,
       url: request.url,
-      userAgent: request.headers['user-agent'],
+      userAgent: request.headers["user-agent"],
       userId: request.user?.id,
-      error: exception instanceof Error ? {
-        name: exception.name,
-        message: exception.message,
-        stack: exception.stack
-      } : exception,
-      response: errorResponse
+      error:
+        exception instanceof Error
+          ? {
+              name: exception.name,
+              message: exception.message,
+              stack: exception.stack,
+            }
+          : exception,
+      response: errorResponse,
     };
 
-    if (errorResponse.error.code === 'INTERNAL_SERVER_ERROR') {
-      this.logger.error('Internal server error', logEntry);
+    if (errorResponse.error.code === "INTERNAL_SERVER_ERROR") {
+      this.logger.error("Internal server error", logEntry);
     } else {
-      this.logger.warn('Business exception', logEntry);
+      this.logger.warn("Business exception", logEntry);
     }
   }
 }
@@ -534,13 +500,13 @@ export class LoggingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
-    
-    const requestId = request.headers['x-request-id'] || ulid();
+
+    const requestId = request.headers["x-request-id"] || ulid();
     const startTime = Date.now();
 
     // 设置请求ID
     request.requestId = requestId;
-    response.setHeader('x-request-id', requestId);
+    response.setHeader("x-request-id", requestId);
 
     const logEntry = {
       requestId,
@@ -548,47 +514,47 @@ export class LoggingInterceptor implements NestInterceptor {
       url: request.url,
       query: request.query,
       body: this.sanitizeBody(request.body),
-      userAgent: request.headers['user-agent'],
+      userAgent: request.headers["user-agent"],
       userId: request.user?.id,
-      ip: request.ip
+      ip: request.ip,
     };
 
-    this.logger.log('Incoming request', logEntry);
+    this.logger.log("Incoming request", logEntry);
 
     return next.handle().pipe(
       tap(() => {
         const duration = Date.now() - startTime;
-        this.logger.log('Request completed', {
+        this.logger.log("Request completed", {
           requestId,
           statusCode: response.statusCode,
-          duration: `${duration}ms`
+          duration: `${duration}ms`,
         });
       }),
       catchError((error) => {
         const duration = Date.now() - startTime;
-        this.logger.error('Request failed', {
+        this.logger.error("Request failed", {
           requestId,
           error: error.message,
           duration: `${duration}ms`,
-          statusCode: error.status || 500
+          statusCode: error.status || 500,
         });
         return throwError(() => error);
-      })
+      }),
     );
   }
 
   private sanitizeBody(body: any): any {
     if (!body) return body;
-    
-    const sensitiveFields = ['password', 'token', 'authorization', 'creditCard'];
+
+    const sensitiveFields = ["password", "token", "authorization", "creditCard"];
     const sanitized = { ...body };
-    
-    sensitiveFields.forEach(field => {
+
+    sensitiveFields.forEach((field) => {
       if (sanitized[field]) {
-        sanitized[field] = '***';
+        sanitized[field] = "***";
       }
     });
-    
+
     return sanitized;
   }
 }
@@ -603,27 +569,25 @@ export class MetricsInterceptor implements NestInterceptor {
 
   constructor(private readonly metricsService: MetricsService) {
     this.requestDuration = this.metricsService.createHistogram({
-      name: 'http_request_duration_seconds',
-      help: 'HTTP request duration in seconds',
-      labelNames: ['method', 'route', 'status_code']
+      name: "http_request_duration_seconds",
+      help: "HTTP request duration in seconds",
+      labelNames: ["method", "route", "status_code"],
     });
   }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
-    
+
     const startTime = Date.now();
     const method = request.method;
-    const route = request.route?.path || 'unknown';
+    const route = request.route?.path || "unknown";
 
     return next.handle().pipe(
       tap(() => {
         const duration = (Date.now() - startTime) / 1000;
-        this.requestDuration
-          .labels(method, route, response.statusCode.toString())
-          .observe(duration);
-      })
+        this.requestDuration.labels(method, route, response.statusCode.toString()).observe(duration);
+      }),
     );
   }
 }
@@ -646,30 +610,26 @@ export class ApiResponse<T> {
       success: true,
       data,
       message,
-      meta
+      meta,
     };
   }
 
-  static paginated<T>(
-    items: T[],
-    pagination: PaginationMeta,
-    message?: string
-  ): ApiResponse<PaginatedResponse<T>> {
+  static paginated<T>(items: T[], pagination: PaginationMeta, message?: string): ApiResponse<PaginatedResponse<T>> {
     return {
       success: true,
       data: {
         items,
-        pagination
+        pagination,
       },
-      message
+      message,
     };
   }
 
-  static empty(message: string = '操作成功'): ApiResponse<null> {
+  static empty(message: string = "操作成功"): ApiResponse<null> {
     return {
       success: true,
       data: null,
-      message
+      message,
     };
   }
 }
@@ -706,7 +666,7 @@ export class PaginatedResponse<T> {
 ### 7.1 控制器测试
 
 ```typescript
-describe('OrderController', () => {
+describe("OrderController", () => {
   let controller: OrderController;
   let commandBus: CommandBus;
   let queryBus: QueryBus;
@@ -717,20 +677,20 @@ describe('OrderController', () => {
       providers: [
         {
           provide: CommandBus,
-          useValue: { execute: jest.fn() }
+          useValue: { execute: jest.fn() },
         },
         {
           provide: QueryBus,
-          useValue: { execute: jest.fn() }
+          useValue: { execute: jest.fn() },
         },
         {
           provide: OrderAssembler,
           useValue: {
             toCreateOrderCommand: jest.fn(),
-            toOrderResponseDto: jest.fn()
-          }
-        }
-      ]
+            toOrderResponseDto: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     controller = module.get<OrderController>(OrderController);
@@ -738,18 +698,18 @@ describe('OrderController', () => {
     queryBus = module.get<QueryBus>(QueryBus);
   });
 
-  describe('createOrder', () => {
-    it('应该成功创建订单并返回标准化响应', async () => {
+  describe("createOrder", () => {
+    it("应该成功创建订单并返回标准化响应", async () => {
       // Given
-      const user = { id: 'user-123' };
+      const user = { id: "user-123" };
       const createOrderDto = new CreateOrderRequestDto();
       const command = new CreateOrderCommand(/* ... */);
       const orderResult = new Order(/* ... */);
       const responseDto = new OrderResponseDto();
 
-      jest.spyOn(controller['orderAssembler'], 'toCreateOrderCommand').mockReturnValue(command);
-      jest.spyOn(commandBus, 'execute').mockResolvedValue(orderResult);
-      jest.spyOn(controller['orderAssembler'], 'toOrderResponseDto').mockReturnValue(responseDto);
+      jest.spyOn(controller["orderAssembler"], "toCreateOrderCommand").mockReturnValue(command);
+      jest.spyOn(commandBus, "execute").mockResolvedValue(orderResult);
+      jest.spyOn(controller["orderAssembler"], "toOrderResponseDto").mockReturnValue(responseDto);
 
       // When
       const result = await controller.createOrder(user, createOrderDto);
@@ -760,16 +720,14 @@ describe('OrderController', () => {
       expect(commandBus.execute).toHaveBeenCalledWith(command);
     });
 
-    it('应该处理验证错误', async () => {
+    it("应该处理验证错误", async () => {
       // Given
-      const user = { id: 'user-123' };
+      const user = { id: "user-123" };
       const invalidDto = new CreateOrderRequestDto();
       invalidDto.items = []; // 空订单项应该触发验证错误
 
       // When & Then
-      await expect(controller.createOrder(user, invalidDto))
-        .rejects
-        .toThrow(BadRequestException);
+      await expect(controller.createOrder(user, invalidDto)).rejects.toThrow(BadRequestException);
     });
   });
 });
@@ -782,27 +740,24 @@ describe('OrderController', () => {
 ```typescript
 // main.ts
 const config = new DocumentBuilder()
-  .setTitle('订单管理系统 API')
-  .setDescription('基于 DDD + Clean Architecture 的订单管理系统')
-  .setVersion('1.0')
-  .addBearerAuth(
-    { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-    'access-token'
-  )
-  .addTag('orders', '订单管理')
-  .addTag('products', '商品管理')
-  .addTag('customers', '客户管理')
-  .addServer(process.env.API_BASE_URL || 'http://localhost:3000')
+  .setTitle("订单管理系统 API")
+  .setDescription("基于 DDD + Clean Architecture 的订单管理系统")
+  .setVersion("1.0")
+  .addBearerAuth({ type: "http", scheme: "bearer", bearerFormat: "JWT" }, "access-token")
+  .addTag("orders", "订单管理")
+  .addTag("products", "商品管理")
+  .addTag("customers", "客户管理")
+  .addServer(process.env.API_BASE_URL || "http://localhost:3000")
   .build();
 
 const document = SwaggerModule.createDocument(app, config);
-SwaggerModule.setup('api/docs', app, document, {
+SwaggerModule.setup("api/docs", app, document, {
   swaggerOptions: {
     persistAuthorization: true,
     displayRequestDuration: true,
-    filter: true
+    filter: true,
   },
-  customSiteTitle: '订单管理系统 API 文档'
+  customSiteTitle: "订单管理系统 API 文档",
 });
 ```
 
@@ -820,4 +775,5 @@ SwaggerModule.setup('api/docs', app, document, {
 遵循本规范可以构建出安全、可靠、易用的接口层，为前端和第三方系统提供高质量的 API 服务。
 
 ---
-*文档版本: 1.0 | 最后更新: 2024-11-XX | 适用项目: NestJS DDD 混合架构项目*
+
+_文档版本: 1.0 | 最后更新: 2024-11-XX | 适用项目: NestJS DDD 混合架构项目_

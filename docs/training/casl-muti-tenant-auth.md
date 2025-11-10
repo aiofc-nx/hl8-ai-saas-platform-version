@@ -27,17 +27,17 @@
 ```typescript
 // 核心类型定义
 interface AppAbility extends Ability<[Action, AppSubject]> {}
-type AppSubject = 'all' | SubjectObject | InferSubjects<typeof Entity>;
+type AppSubject = "all" | SubjectObject | InferSubjects<typeof Entity>;
 
-type Action = 
-  | 'manage'    // 所有操作
-  | 'create'    // 创建
-  | 'read'      // 读取  
-  | 'update'    // 更新
-  | 'delete'    // 删除
-  | 'export'    // 导出
-  | 'invite'    // 邀请
-  | string;     // 自定义操作
+type Action =
+  | "manage" // 所有操作
+  | "create" // 创建
+  | "read" // 读取
+  | "update" // 更新
+  | "delete" // 删除
+  | "export" // 导出
+  | "invite" // 邀请
+  | string; // 自定义操作
 
 interface CaslPermission {
   action: Action;
@@ -64,24 +64,14 @@ export class PermissionPolicy extends AggregateRoot {
     private isActive: boolean,
     private priority: number,
     private createdAt: DateTime,
-    private updatedAt: DateTime
+    private updatedAt: DateTime,
   ) {
     super();
   }
 
   // 创建权限策略
   static create(creation: PolicyCreation): PermissionPolicy {
-    const policy = new PermissionPolicy(
-      PermissionPolicyId.create(),
-      creation.name,
-      creation.description,
-      creation.rules,
-      creation.target,
-      true,
-      creation.priority || 0,
-      DateTime.now(),
-      DateTime.now()
-    );
+    const policy = new PermissionPolicy(PermissionPolicyId.create(), creation.name, creation.description, creation.rules, creation.target, true, creation.priority || 0, DateTime.now(), DateTime.now());
 
     policy.addDomainEvent(new PermissionPolicyCreatedEvent(policy.id));
     return policy;
@@ -90,7 +80,7 @@ export class PermissionPolicy extends AggregateRoot {
   // 评估权限
   evaluate(context: PolicyContext): PolicyResult {
     if (!this.isActive) {
-      return PolicyResult.denied('策略未激活');
+      return PolicyResult.denied("策略未激活");
     }
 
     for (const rule of this.rules) {
@@ -105,7 +95,7 @@ export class PermissionPolicy extends AggregateRoot {
 
   // 转换为 CASL 规则
   toCaslRules(tenantId: TenantId): RawRuleOf<AppAbility>[] {
-    return this.rules.map(rule => ({
+    return this.rules.map((rule) => ({
       action: rule.action,
       subject: rule.subject,
       conditions: rule.conditions,
@@ -114,8 +104,8 @@ export class PermissionPolicy extends AggregateRoot {
       // 自动添加租户隔离条件
       conditions: {
         ...rule.conditions,
-        tenantId: tenantId.value
-      }
+        tenantId: tenantId.value,
+      },
     }));
   }
 }
@@ -127,7 +117,7 @@ export class PolicyRule extends ValueObject {
     public readonly subject: AppSubject,
     public readonly conditions?: Conditions,
     public readonly inverted: boolean = false,
-    public readonly reason?: string
+    public readonly reason?: string,
   ) {
     super();
     this.validate();
@@ -138,18 +128,16 @@ export class PolicyRule extends ValueObject {
       // 应用条件评估
       const matches = this.evaluateConditions(context);
       const allowed = this.inverted ? !matches : matches;
-      
-      return allowed ? 
-        PolicyResult.allowed() : 
-        PolicyResult.denied(this.reason || '规则不匹配');
+
+      return allowed ? PolicyResult.allowed() : PolicyResult.denied(this.reason || "规则不匹配");
     } catch (error) {
-      return PolicyResult.denied('规则评估失败');
+      return PolicyResult.denied("规则评估失败");
     }
   }
 
   private evaluateConditions(context: PolicyContext): boolean {
     if (!this.conditions) return true;
-    
+
     return this.evaluateConditionObject(this.conditions, context);
   }
 
@@ -164,10 +152,10 @@ export class PolicyRule extends ValueObject {
 
   private evaluateCondition(key: string, value: any, context: PolicyContext): boolean {
     // 实现复杂的条件评估逻辑
-    if (typeof value === 'object' && value !== null) {
+    if (typeof value === "object" && value !== null) {
       return this.evaluateOperatorCondition(key, value, context);
     }
-    
+
     return context.getFieldValue(key) === value;
   }
 
@@ -175,17 +163,26 @@ export class PolicyRule extends ValueObject {
     // 支持 CASL 操作符: $eq, $ne, $in, $nin, $gt, $gte, $lt, $lte, $elemMatch
     for (const [op, opValue] of Object.entries(operator)) {
       const fieldValue = context.getFieldValue(key);
-      
+
       switch (op) {
-        case '$eq': return fieldValue === opValue;
-        case '$ne': return fieldValue !== opValue;
-        case '$in': return Array.isArray(opValue) && opValue.includes(fieldValue);
-        case '$nin': return Array.isArray(opValue) && !opValue.includes(fieldValue);
-        case '$gt': return fieldValue > opValue;
-        case '$gte': return fieldValue >= opValue;
-        case '$lt': return fieldValue < opValue;
-        case '$lte': return fieldValue <= opValue;
-        default: return false;
+        case "$eq":
+          return fieldValue === opValue;
+        case "$ne":
+          return fieldValue !== opValue;
+        case "$in":
+          return Array.isArray(opValue) && opValue.includes(fieldValue);
+        case "$nin":
+          return Array.isArray(opValue) && !opValue.includes(fieldValue);
+        case "$gt":
+          return fieldValue > opValue;
+        case "$gte":
+          return fieldValue >= opValue;
+        case "$lt":
+          return fieldValue < opValue;
+        case "$lte":
+          return fieldValue <= opValue;
+        default:
+          return false;
       }
     }
     return false;
@@ -203,27 +200,21 @@ export class DomainCaslAbilityFactory {
     private readonly policyRepository: PermissionPolicyRepository,
     private readonly tenantRepository: TenantRepository,
     private readonly userRepository: UserRepository,
-    private readonly subscriptionService: SubscriptionService
+    private readonly subscriptionService: SubscriptionService,
   ) {}
 
   // 创建用户能力定义
   async createForUser(user: User, tenant: Tenant): Promise<AppAbility> {
-    return createMongoAbility<AppAbility>(
-      await this.buildAbilityRules(user, tenant),
-      {
-        // 自定义条件匹配器
-        conditionsMatcher: (conditions, object) => 
-          this.conditionsMatcher(conditions, object),
-        
-        // 字段匹配器
-        fieldMatcher: (field, fields) => 
-          this.fieldMatcher(field, fields),
-        
-        // 主题类型检测
-        detectSubjectType: (subject) => 
-          this.detectSubjectType(subject)
-      }
-    );
+    return createMongoAbility<AppAbility>(await this.buildAbilityRules(user, tenant), {
+      // 自定义条件匹配器
+      conditionsMatcher: (conditions, object) => this.conditionsMatcher(conditions, object),
+
+      // 字段匹配器
+      fieldMatcher: (field, fields) => this.fieldMatcher(field, fields),
+
+      // 主题类型检测
+      detectSubjectType: (subject) => this.detectSubjectType(subject),
+    });
   }
 
   private async buildAbilityRules(user: User, tenant: Tenant): Promise<RawRuleOf<AppAbility>[]> {
@@ -234,7 +225,7 @@ export class DomainCaslAbilityFactory {
 
     // 2. 租户成员规则
     if (user.tenantId.equals(tenant.id)) {
-      rules.push(...await this.buildTenantMemberRules(user, tenant));
+      rules.push(...(await this.buildTenantMemberRules(user, tenant)));
     }
 
     // 3. 全局管理员规则
@@ -243,10 +234,10 @@ export class DomainCaslAbilityFactory {
     }
 
     // 4. 动态策略规则
-    rules.push(...await this.buildDynamicPolicyRules(user, tenant));
+    rules.push(...(await this.buildDynamicPolicyRules(user, tenant)));
 
     // 5. 订阅限制规则
-    rules.push(...await this.buildSubscriptionRules(tenant));
+    rules.push(...(await this.buildSubscriptionRules(tenant)));
 
     return rules;
   }
@@ -266,9 +257,9 @@ export class DomainCaslAbilityFactory {
 
     // 基础读取权限
     rules.push({
-      action: 'read',
-      subject: 'Tenant',
-      conditions: { id: tenant.id.value }
+      action: "read",
+      subject: "Tenant",
+      conditions: { id: tenant.id.value },
     });
 
     return rules;
@@ -299,58 +290,54 @@ export class DomainCaslAbilityFactory {
     const rules: RawRuleOf<AppAbility>[] = [];
 
     switch (role.name) {
-      case 'OWNER':
+      case "OWNER":
         rules.push({
-          action: 'manage',
-          subject: 'all',
-          conditions: { tenantId: tenant.id.value }
+          action: "manage",
+          subject: "all",
+          conditions: { tenantId: tenant.id.value },
         });
         break;
 
-      case 'ADMIN':
+      case "ADMIN":
         rules.push(
           {
-            action: ['read', 'create', 'update'],
-            subject: ['User', 'Product', 'Order'],
-            conditions: { tenantId: tenant.id.value }
+            action: ["read", "create", "update"],
+            subject: ["User", "Product", "Order"],
+            conditions: { tenantId: tenant.id.value },
           },
           {
-            action: 'delete',
-            subject: ['User', 'Product'],
+            action: "delete",
+            subject: ["User", "Product"],
             inverted: true, // 禁止删除
-            reason: '管理员不能删除用户和产品'
-          }
+            reason: "管理员不能删除用户和产品",
+          },
         );
         break;
 
-      case 'MEMBER':
+      case "MEMBER":
         rules.push(
           {
-            action: 'create',
-            subject: 'Order',
-            conditions: { tenantId: tenant.id.value }
+            action: "create",
+            subject: "Order",
+            conditions: { tenantId: tenant.id.value },
           },
           {
-            action: 'read',
-            subject: 'Order',
+            action: "read",
+            subject: "Order",
             conditions: {
               tenantId: tenant.id.value,
-              $or: [
-                { userId: user.id.value },
-                { isPublic: true },
-                { team: { $elemMatch: { userId: user.id.value } } }
-              ]
-            }
+              $or: [{ userId: user.id.value }, { isPublic: true }, { team: { $elemMatch: { userId: user.id.value } } }],
+            },
           },
           {
-            action: 'update',
-            subject: 'Order',
+            action: "update",
+            subject: "Order",
             conditions: {
               tenantId: tenant.id.value,
               userId: user.id.value,
-              status: { $in: ['draft', 'pending'] }
-            }
-          }
+              status: { $in: ["draft", "pending"] },
+            },
+          },
         );
         break;
     }
@@ -359,12 +346,10 @@ export class DomainCaslAbilityFactory {
   }
 
   private async buildDynamicPolicyRules(user: User, tenant: Tenant): Promise<RawRuleOf<AppAbility>[]> {
-    const policies = await this.policyRepository.findActiveByTarget(
-      PolicyTarget.forUser(user.id, tenant.id)
-    );
+    const policies = await this.policyRepository.findActiveByTarget(PolicyTarget.forUser(user.id, tenant.id));
 
     const rules: RawRuleOf<AppAbility>[] = [];
-    
+
     for (const policy of policies) {
       rules.push(...policy.toCaslRules(tenant.id));
     }
@@ -374,7 +359,7 @@ export class DomainCaslAbilityFactory {
 
   // 自定义条件匹配器
   private conditionsMatcher(conditions: Conditions, object: SubjectObject): boolean {
-    if (typeof conditions !== 'object' || conditions === null) {
+    if (typeof conditions !== "object" || conditions === null) {
       return conditions === object;
     }
 
@@ -392,11 +377,11 @@ export class DomainCaslAbilityFactory {
 
   private matchField(field: string, condition: any, object: any): boolean {
     const value = this.getFieldValue(field, object);
-    
-    if (typeof condition === 'object' && condition !== null) {
+
+    if (typeof condition === "object" && condition !== null) {
       return this.matchOperators(condition, value);
     }
-    
+
     return value === condition;
   }
 
@@ -411,20 +396,28 @@ export class DomainCaslAbilityFactory {
 
   private matchOperator(operator: string, expected: any, actual: any): boolean {
     switch (operator) {
-      case '$eq': return actual === expected;
-      case '$ne': return actual !== expected;
-      case '$in': return Array.isArray(expected) && expected.includes(actual);
-      case '$nin': return Array.isArray(expected) && !expected.includes(actual);
-      case '$gt': return actual > expected;
-      case '$gte': return actual >= expected;
-      case '$lt': return actual < expected;
-      case '$lte': return actual <= expected;
-      case '$regex': return new RegExp(expected).test(actual);
-      case '$elemMatch': 
-        return Array.isArray(actual) && actual.some(item => 
-          this.matchConditions(expected, item)
-        );
-      default: return false;
+      case "$eq":
+        return actual === expected;
+      case "$ne":
+        return actual !== expected;
+      case "$in":
+        return Array.isArray(expected) && expected.includes(actual);
+      case "$nin":
+        return Array.isArray(expected) && !expected.includes(actual);
+      case "$gt":
+        return actual > expected;
+      case "$gte":
+        return actual >= expected;
+      case "$lt":
+        return actual < expected;
+      case "$lte":
+        return actual <= expected;
+      case "$regex":
+        return new RegExp(expected).test(actual);
+      case "$elemMatch":
+        return Array.isArray(actual) && actual.some((item) => this.matchConditions(expected, item));
+      default:
+        return false;
     }
   }
 }
@@ -440,20 +433,20 @@ export class DomainCaslAbilityFactory {
 export class CaslAbilityService {
   private readonly cache = new LRUCache<string, AppAbility>({
     max: 1000,
-    ttl: 5 * 60 * 1000 // 5分钟缓存
+    ttl: 5 * 60 * 1000, // 5分钟缓存
   });
 
   constructor(
     private readonly abilityFactory: DomainCaslAbilityFactory,
     private readonly userRepository: UserRepository,
     private readonly tenantRepository: TenantRepository,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   // 获取用户能力
   async getAbilityForUser(userId: string, tenantId: string): Promise<AppAbility> {
     const cacheKey = `${userId}:${tenantId}`;
-    
+
     // 缓存检查
     const cached = this.cache.get(cacheKey);
     if (cached) {
@@ -461,26 +454,22 @@ export class CaslAbilityService {
     }
 
     try {
-      const [user, tenant] = await Promise.all([
-        this.userRepository.findById(UserId.create(userId)),
-        this.tenantRepository.findById(TenantId.create(tenantId))
-      ]);
+      const [user, tenant] = await Promise.all([this.userRepository.findById(UserId.create(userId)), this.tenantRepository.findById(TenantId.create(tenantId))]);
 
       if (!user || !tenant) {
-        throw new AuthorizationError('用户或租户不存在');
+        throw new AuthorizationError("用户或租户不存在");
       }
 
       const ability = await this.abilityFactory.createForUser(user, tenant);
-      
+
       // 缓存能力
       this.cache.set(cacheKey, ability);
-      
+
       this.logger.debug(`CASL ability created for user ${userId} in tenant ${tenantId}`);
       return ability;
-
     } catch (error) {
       this.logger.error(`Failed to create CASL ability: ${error.message}`, error.stack);
-      throw new AuthorizationError('权限系统初始化失败');
+      throw new AuthorizationError("权限系统初始化失败");
     }
   }
 
@@ -499,7 +488,7 @@ export class CaslAbilityService {
   }
 
   // 批量获取能力
-  async getAbilitiesForUsers(userTenantPairs: Array<{userId: string, tenantId: string}>): Promise<Map<string, AppAbility>> {
+  async getAbilitiesForUsers(userTenantPairs: Array<{ userId: string; tenantId: string }>): Promise<Map<string, AppAbility>> {
     const abilities = new Map<string, AppAbility>();
     const uncachedPairs = [];
 
@@ -507,7 +496,7 @@ export class CaslAbilityService {
     for (const pair of userTenantPairs) {
       const cacheKey = `${pair.userId}:${pair.tenantId}`;
       const cached = this.cache.get(cacheKey);
-      
+
       if (cached) {
         abilities.set(cacheKey, cached);
       } else {
@@ -518,7 +507,7 @@ export class CaslAbilityService {
     // 批量创建未缓存的能力
     if (uncachedPairs.length > 0) {
       const newAbilities = await this.createAbilitiesForPairs(uncachedPairs);
-      
+
       for (const [key, ability] of newAbilities) {
         abilities.set(key, ability);
         this.cache.set(key, ability);
@@ -528,20 +517,17 @@ export class CaslAbilityService {
     return abilities;
   }
 
-  private async createAbilitiesForPairs(pairs: Array<{userId: string, tenantId: string}>): Promise<Map<string, AppAbility>> {
+  private async createAbilitiesForPairs(pairs: Array<{ userId: string; tenantId: string }>): Promise<Map<string, AppAbility>> {
     const abilities = new Map<string, AppAbility>();
-    
+
     // 批量查询用户和租户
-    const userIds = [...new Set(pairs.map(p => p.userId))];
-    const tenantIds = [...new Set(pairs.map(p => p.tenantId))];
+    const userIds = [...new Set(pairs.map((p) => p.userId))];
+    const tenantIds = [...new Set(pairs.map((p) => p.tenantId))];
 
-    const [users, tenants] = await Promise.all([
-      this.userRepository.findByIds(userIds.map(UserId.create)),
-      this.tenantRepository.findByIds(tenantIds.map(TenantId.create))
-    ]);
+    const [users, tenants] = await Promise.all([this.userRepository.findByIds(userIds.map(UserId.create)), this.tenantRepository.findByIds(tenantIds.map(TenantId.create))]);
 
-    const userMap = new Map(users.map(u => [u.id.value, u]));
-    const tenantMap = new Map(tenants.map(t => [t.id.value, t]));
+    const userMap = new Map(users.map((u) => [u.id.value, u]));
+    const tenantMap = new Map(tenants.map((t) => [t.id.value, t]));
 
     // 为每个用户-租户对创建能力
     for (const pair of pairs) {
@@ -570,96 +556,70 @@ export class CaslAbilityService {
 export abstract class CaslAwareUseCase {
   constructor(
     protected readonly abilityService: CaslAbilityService,
-    protected readonly securityContext: SecurityContext
+    protected readonly securityContext: SecurityContext,
   ) {}
 
   // 权限检查快捷方法
   protected async checkPermission(action: Action, subject: AppSubject, field?: string): Promise<void> {
-    const ability = await this.abilityService.getAbilityForUser(
-      this.securityContext.userId,
-      this.securityContext.tenantId
-    );
+    const ability = await this.abilityService.getAbilityForUser(this.securityContext.userId, this.securityContext.tenantId);
 
-    const canPerform = field ? 
-      ability.can(action, subject, field) : 
-      ability.can(action, subject);
+    const canPerform = field ? ability.can(action, subject, field) : ability.can(action, subject);
 
     if (!canPerform) {
-      throw new AuthorizationError(
-        `无权执行操作: ${action} ${typeof subject === 'string' ? subject : subject.__typename}`
-      );
+      throw new AuthorizationError(`无权执行操作: ${action} ${typeof subject === "string" ? subject : subject.__typename}`);
     }
   }
 
   // 过滤可访问的资源
-  protected async filterAccessible<T extends SubjectObject>(
-    resources: T[],
-    action: Action = 'read'
-  ): Promise<T[]> {
-    const ability = await this.abilityService.getAbilityForUser(
-      this.securityContext.userId,
-      this.securityContext.tenantId
-    );
+  protected async filterAccessible<T extends SubjectObject>(resources: T[], action: Action = "read"): Promise<T[]> {
+    const ability = await this.abilityService.getAbilityForUser(this.securityContext.userId, this.securityContext.tenantId);
 
-    return resources.filter(resource => ability.can(action, resource));
+    return resources.filter((resource) => ability.can(action, resource));
   }
 
   // 检查具体资源权限
-  protected async checkResourcePermission<T extends SubjectObject>(
-    resource: T,
-    action: Action,
-    field?: string
-  ): Promise<void> {
-    const ability = await this.abilityService.getAbilityForUser(
-      this.securityContext.userId,
-      this.securityContext.tenantId
-    );
+  protected async checkResourcePermission<T extends SubjectObject>(resource: T, action: Action, field?: string): Promise<void> {
+    const ability = await this.abilityService.getAbilityForUser(this.securityContext.userId, this.securityContext.tenantId);
 
-    const canPerform = field ? 
-      ability.can(action, resource, field) : 
-      ability.can(action, resource);
+    const canPerform = field ? ability.can(action, resource, field) : ability.can(action, resource);
 
     if (!canPerform) {
-      throw new AuthorizationError(
-        `无权访问资源: ${action} ${resource.__typename || 'unknown'}`
-      );
+      throw new AuthorizationError(`无权访问资源: ${action} ${resource.__typename || "unknown"}`);
     }
   }
 }
 
 // CASL 命令处理器
 @CommandHandler(CreateOrderCommand)
-export class CreateOrderHandler extends CaslAwareUseCase 
-  implements ICommandHandler<CreateOrderCommand> {
-  
+export class CreateOrderHandler extends CaslAwareUseCase implements ICommandHandler<CreateOrderCommand> {
   constructor(
     abilityService: CaslAbilityService,
     securityContext: SecurityContext,
     private readonly orderRepository: OrderRepository,
-    private readonly productService: ProductService
+    private readonly productService: ProductService,
   ) {
     super(abilityService, securityContext);
   }
 
   async execute(command: CreateOrderCommand): Promise<OrderResult> {
     // 1. 检查创建订单的权限
-    await this.checkPermission('create', 'Order');
+    await this.checkPermission("create", "Order");
 
     // 2. 验证订单项权限
     for (const item of command.items) {
       const product = await this.productService.getProduct(item.productId);
-      await this.checkResourcePermission(product, 'read');
+      await this.checkResourcePermission(product, "read");
     }
 
     // 3. 创建订单
     const order = Order.create({
       ...command,
       userId: UserId.create(this.securityContext.userId),
-      tenantId: TenantId.create(this.securityContext.tenantId)
+      tenantId: TenantId.create(this.securityContext.tenantId),
     });
 
     // 4. 验证对创建后订单的权限
-    await this.checkResourcePermission(order, 'read');
+    await this.checkResourcePermission(order, "read");
 
     await this.orderRepository.save(order);
 
@@ -669,42 +629,35 @@ export class CreateOrderHandler extends CaslAwareUseCase
 
 // CASL 查询处理器
 @QueryHandler(GetOrdersQuery)
-export class GetOrdersHandler extends CaslAwareUseCase 
-  implements IQueryHandler<GetOrdersQuery> {
-  
+export class GetOrdersHandler extends CaslAwareUseCase implements IQueryHandler<GetOrdersQuery> {
   constructor(
     abilityService: CaslAbilityService,
     securityContext: SecurityContext,
     private readonly orderRepository: OrderRepository,
-    private readonly caslFilter: CaslMikroORMFilter
+    private readonly caslFilter: CaslMikroORMFilter,
   ) {
     super(abilityService, securityContext);
   }
 
   async execute(query: GetOrdersQuery): Promise<Order[]> {
     // 1. 检查读取订单的权限
-    await this.checkPermission('read', 'Order');
+    await this.checkPermission("read", "Order");
 
     // 2. 使用 CASL 过滤条件查询
-    const caslConditions = await this.caslFilter.addConditionsToQuery(
-      Order,
-      'read',
-      this.securityContext.userId,
-      this.securityContext.tenantId
-    );
+    const caslConditions = await this.caslFilter.addConditionsToQuery(Order, "read", this.securityContext.userId, this.securityContext.tenantId);
 
     // 3. 执行查询
     const orders = await this.orderRepository.findByTenant(
       TenantId.create(this.securityContext.tenantId),
       {
         ...query.filters,
-        ...caslConditions
+        ...caslConditions,
       },
-      query.pagination
+      query.pagination,
     );
 
     // 4. 二次过滤（确保权限）
-    return this.filterAccessible(orders, 'read');
+    return this.filterAccessible(orders, "read");
   }
 }
 ```
@@ -720,22 +673,15 @@ export class CaslMikroORMFilter {
   constructor(private readonly abilityService: CaslAbilityService) {}
 
   // 将 CASL 规则转换为 MikroORM 查询条件
-  async addConditionsToQuery<T extends object>(
-    entityClass: EntityClass<T>,
-    action: Action,
-    userId: string,
-    tenantId: string
-  ): Promise<FilterQuery<T>> {
+  async addConditionsToQuery<T extends object>(entityClass: EntityClass<T>, action: Action, userId: string, tenantId: string): Promise<FilterQuery<T>> {
     const ability = await this.abilityService.getAbilityForUser(userId, tenantId);
     const rules = ability.rulesFor(action, entityClass);
-    
+
     if (rules.length === 0) {
       return { id: { $eq: null } } as FilterQuery<T>; // 无权限
     }
 
-    const conditions = rules
-      .map(rule => this.ruleToMikroORMCondition(rule))
-      .filter(condition => condition !== null);
+    const conditions = rules.map((rule) => this.ruleToMikroORMCondition(rule)).filter((condition) => condition !== null);
 
     if (conditions.length === 0) {
       return {} as FilterQuery<T>; // 无限制
@@ -762,7 +708,7 @@ export class CaslMikroORMFilter {
     const result: any = {};
 
     for (const [key, value] of Object.entries(conditions)) {
-      if (typeof value === 'object' && value !== null) {
+      if (typeof value === "object" && value !== null) {
         result[key] = this.transformOperatorConditions(value);
       } else {
         result[key] = value;
@@ -777,34 +723,34 @@ export class CaslMikroORMFilter {
 
     for (const [operator, value] of Object.entries(operators)) {
       switch (operator) {
-        case '$eq':
+        case "$eq":
           result.$eq = value;
           break;
-        case '$ne':
+        case "$ne":
           result.$ne = value;
           break;
-        case '$in':
+        case "$in":
           result.$in = value;
           break;
-        case '$nin':
+        case "$nin":
           result.$nin = value;
           break;
-        case '$gt':
+        case "$gt":
           result.$gt = value;
           break;
-        case '$gte':
+        case "$gte":
           result.$gte = value;
           break;
-        case '$lt':
+        case "$lt":
           result.$lt = value;
           break;
-        case '$lte':
+        case "$lte":
           result.$lte = value;
           break;
-        case '$regex':
+        case "$regex":
           result.$re = value;
           break;
-        case '$elemMatch':
+        case "$elemMatch":
           result.$elemMatch = this.transformConditions(value);
           break;
         default:
@@ -817,14 +763,9 @@ export class CaslMikroORMFilter {
   }
 
   // 批量过滤
-  async filterResources<T extends SubjectObject>(
-    resources: T[],
-    action: Action,
-    userId: string,
-    tenantId: string
-  ): Promise<T[]> {
+  async filterResources<T extends SubjectObject>(resources: T[], action: Action, userId: string, tenantId: string): Promise<T[]> {
     const ability = await this.abilityService.getAbilityForUser(userId, tenantId);
-    return resources.filter(resource => ability.can(action, resource));
+    return resources.filter((resource) => ability.can(action, resource));
   }
 }
 ```
@@ -837,7 +778,7 @@ export class CaslMikroORMFilter {
 export class CaslAuditService {
   constructor(
     private readonly auditRepository: AuditRepository,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   // 记录权限检查
@@ -851,14 +792,14 @@ export class CaslAuditService {
       field?: string;
       conditions?: any;
       reason?: string;
-    }
+    },
   ): Promise<void> {
     const auditLog = PermissionAudit.create({
       userId: context.userId,
       tenantId: context.tenantId,
       sessionId: context.sessionId,
       action,
-      subject: typeof subject === 'string' ? subject : subject.__typename,
+      subject: typeof subject === "string" ? subject : subject.__typename,
       granted,
       resourceId: details?.resourceId,
       field: details?.field,
@@ -866,7 +807,7 @@ export class CaslAuditService {
       reason: details?.reason,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     await this.auditRepository.save(auditLog);
@@ -875,23 +816,19 @@ export class CaslAuditService {
       this.logger.warn(`Permission denied: ${action} ${auditLog.subject}`, {
         userId: context.userId,
         tenantId: context.tenantId,
-        reason: details?.reason
+        reason: details?.reason,
       });
     }
   }
 
   // 记录能力使用情况
-  async recordAbilityUsage(
-    context: SecurityContext,
-    ability: AppAbility,
-    duration: number
-  ): Promise<void> {
+  async recordAbilityUsage(context: SecurityContext, ability: AppAbility, duration: number): Promise<void> {
     const usageLog = AbilityUsageAudit.create({
       userId: context.userId,
       tenantId: context.tenantId,
       rulesCount: ability.rules.length,
       duration,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     await this.auditRepository.save(usageLog);
@@ -915,26 +852,20 @@ export class CaslGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly abilityService: CaslAbilityService,
-    private readonly auditService: CaslAuditService
+    private readonly auditService: CaslAuditService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const policyHandlers = this.reflector.get<CaslPolicyHandler[]>(
-      'casl_policies',
-      context.getHandler()
-    ) || [];
+    const policyHandlers = this.reflector.get<CaslPolicyHandler[]>("casl_policies", context.getHandler()) || [];
 
     const request = context.switchToHttp().getRequest();
     const securityContext = request.securityContext;
 
     if (!securityContext) {
-      throw new UnauthorizedException('安全上下文未设置');
+      throw new UnauthorizedException("安全上下文未设置");
     }
 
-    const ability = await this.abilityService.getAbilityForUser(
-      securityContext.userId,
-      securityContext.tenantId
-    );
+    const ability = await this.abilityService.getAbilityForUser(securityContext.userId, securityContext.tenantId);
 
     // 执行所有策略检查
     for (const handler of policyHandlers) {
@@ -945,13 +876,7 @@ export class CaslGuard implements CanActivate {
       await this.auditService.recordAbilityUsage(securityContext, ability, duration);
 
       if (!result) {
-        await this.auditService.recordPermissionCheck(
-          securityContext,
-          'access',
-          'Endpoint',
-          false,
-          { reason: '策略检查失败' }
-        );
+        await this.auditService.recordPermissionCheck(securityContext, "access", "Endpoint", false, { reason: "策略检查失败" });
         return false;
       }
     }
@@ -961,20 +886,16 @@ export class CaslGuard implements CanActivate {
 }
 
 // 策略装饰器工厂
-export const CaslPolicies = (...handlers: CaslPolicyHandler[]) =>
-  SetMetadata('casl_policies', handlers);
+export const CaslPolicies = (...handlers: CaslPolicyHandler[]) => SetMetadata("casl_policies", handlers);
 
 // 常用策略装饰器
-export const CheckPolicies = (action: Action, subject: AppSubject, field?: string) =>
-  CaslPolicies((ability: AppAbility) => 
-    field ? ability.can(action, subject, field) : ability.can(action, subject)
-  );
+export const CheckPolicies = (action: Action, subject: AppSubject, field?: string) => CaslPolicies((ability: AppAbility) => (field ? ability.can(action, subject, field) : ability.can(action, subject)));
 
-export const CheckResourcePolicy = (action: Action, subjectParam: string = 'id') =>
+export const CheckResourcePolicy = (action: Action, subjectParam: string = "id") =>
   CaslPolicies((ability: AppAbility, request: Request) => {
-    const subject = { 
-      __typename: subjectParam, 
-      id: request.params[subjectParam] 
+    const subject = {
+      __typename: subjectParam,
+      id: request.params[subjectParam],
     };
     return ability.can(action, subject);
   });
@@ -986,195 +907,158 @@ export const RequireTenantRole = (role: string) =>
   });
 
 // 自定义条件策略
-export const CheckConditionalPolicy = (
-  action: Action, 
-  subject: AppSubject,
-  conditions: (req: Request) => any
-) => CaslPolicies((ability: AppAbility, request: Request) => {
-  const subjectWithConditions = typeof subject === 'string' ? 
-    subject : { ...subject, ...conditions(request) };
-  return ability.can(action, subjectWithConditions);
-});
+export const CheckConditionalPolicy = (action: Action, subject: AppSubject, conditions: (req: Request) => any) =>
+  CaslPolicies((ability: AppAbility, request: Request) => {
+    const subjectWithConditions = typeof subject === "string" ? subject : { ...subject, ...conditions(request) };
+    return ability.can(action, subjectWithConditions);
+  });
 ```
 
 ### 5.2 能力注入装饰器
 
 ```typescript
 // 能力注入装饰器
-export const InjectAbility = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): Promise<AppAbility> => {
-    const request = ctx.switchToHttp().getRequest();
-    const securityContext = request.securityContext;
+export const InjectAbility = createParamDecorator((data: unknown, ctx: ExecutionContext): Promise<AppAbility> => {
+  const request = ctx.switchToHttp().getRequest();
+  const securityContext = request.securityContext;
 
-    if (!securityContext) {
-      throw new UnauthorizedException('安全上下文未设置');
-    }
-
-    const abilityService = ctx.switchToHttp().getRequest().abilityService;
-    return abilityService.getAbilityForUser(
-      securityContext.userId,
-      securityContext.tenantId
-    );
+  if (!securityContext) {
+    throw new UnauthorizedException("安全上下文未设置");
   }
-);
+
+  const abilityService = ctx.switchToHttp().getRequest().abilityService;
+  return abilityService.getAbilityForUser(securityContext.userId, securityContext.tenantId);
+});
 
 // 能力检查装饰器
-export const AbilityCheck = (
-  action: Action,
-  subject: AppSubject | ((req: Request) => AppSubject),
-  field?: string
-) => createParamDecorator(
-  (data: unknown, ctx: ExecutionContext) => {
+export const AbilityCheck = (action: Action, subject: AppSubject | ((req: Request) => AppSubject), field?: string) =>
+  createParamDecorator((data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
     const ability: AppAbility = request.ability;
 
     if (!ability) {
-      throw new AuthorizationError('能力未注入');
+      throw new AuthorizationError("能力未注入");
     }
 
-    const actualSubject = typeof subject === 'function' ? subject(request) : subject;
-    const allowed = field ? 
-      ability.can(action, actualSubject, field) : 
-      ability.can(action, actualSubject);
+    const actualSubject = typeof subject === "function" ? subject(request) : subject;
+    const allowed = field ? ability.can(action, actualSubject, field) : ability.can(action, actualSubject);
 
     if (!allowed) {
       throw new AuthorizationError(`无权执行操作: ${action}`);
     }
 
     return actualSubject;
-  }
-)();
+  })();
 ```
 
 ### 5.3 控制器实现
 
 ```typescript
 // 基础控制器
-@Controller('api/:tenantId')
+@Controller("api/:tenantId")
 @UseGuards(MultiTenantAuthGuard, CaslGuard)
 export class CaslAwareController {
   constructor(
     protected readonly abilityService: CaslAbilityService,
     protected readonly commandBus: CommandBus,
-    protected readonly queryBus: QueryBus
+    protected readonly queryBus: QueryBus,
   ) {}
 
   // 注入能力到请求
   @UseInterceptors(AbilityInterceptor)
   protected async injectAbility(request: Request): Promise<void> {
     const securityContext = request.securityContext;
-    const ability = await this.abilityService.getAbilityForUser(
-      securityContext.userId,
-      securityContext.tenantId
-    );
+    const ability = await this.abilityService.getAbilityForUser(securityContext.userId, securityContext.tenantId);
     request.ability = ability;
   }
 }
 
 // 订单控制器
-@Controller('orders')
+@Controller("orders")
 export class OrderController extends CaslAwareController {
   @Post()
-  @CaslPolicies(
-    (ability: AppAbility) => ability.can('create', 'Order')
-  )
-  async createOrder(
-    @SecurityContext() context: SecurityContext,
-    @Body() createOrderDto: CreateOrderRequestDto,
-    @InjectAbility() ability: AppAbility
-  ): Promise<ApiResponse<OrderResponseDto>> {
+  @CaslPolicies((ability: AppAbility) => ability.can("create", "Order"))
+  async createOrder(@SecurityContext() context: SecurityContext, @Body() createOrderDto: CreateOrderRequestDto, @InjectAbility() ability: AppAbility): Promise<ApiResponse<OrderResponseDto>> {
     // 使用注入的能力进行额外检查
-    if (createOrderDto.totalAmount > 10000 && !ability.can('create', 'LargeOrder')) {
-      throw new AuthorizationError('无权创建大额订单');
+    if (createOrderDto.totalAmount > 10000 && !ability.can("create", "LargeOrder")) {
+      throw new AuthorizationError("无权创建大额订单");
     }
 
     const command = new CreateOrderCommand(createOrderDto, context);
     const result = await this.commandBus.execute(command);
-    
+
     return ApiResponse.success(result);
   }
 
   @Get()
-  @CheckPolicies('read', 'Order')
-  async getOrders(
-    @SecurityContext() context: SecurityContext,
-    @Query() queryDto: OrderQueryDto,
-    @InjectAbility() ability: AppAbility
-  ): Promise<ApiResponse<PaginatedResponse<OrderResponseDto>>> {
+  @CheckPolicies("read", "Order")
+  async getOrders(@SecurityContext() context: SecurityContext, @Query() queryDto: OrderQueryDto, @InjectAbility() ability: AppAbility): Promise<ApiResponse<PaginatedResponse<OrderResponseDto>>> {
     const query = new GetOrdersQuery(context.getCurrentTenantId(), queryDto);
-    
+
     // 使用能力过滤响应字段
     const orders = await this.queryBus.execute(query);
-    const filteredOrders = orders.map(order => 
-      this.filterOrderFields(order, ability)
-    );
+    const filteredOrders = orders.map((order) => this.filterOrderFields(order, ability));
 
     return ApiResponse.paginated(filteredOrders, queryDto.pagination);
   }
 
-  @Get(':id')
-  @CheckResourcePolicy('read', 'id')
+  @Get(":id")
+  @CheckResourcePolicy("read", "id")
   async getOrder(
-    @Param('id') orderId: string,
-    @AbilityCheck('read', (req) => ({ __typename: 'Order', id: req.params.id })) 
-    orderSubject: any
+    @Param("id") orderId: string,
+    @AbilityCheck("read", (req) => ({ __typename: "Order", id: req.params.id }))
+    orderSubject: any,
   ): Promise<ApiResponse<OrderResponseDto>> {
     const query = new GetOrderQuery(orderId);
     const order = await this.queryBus.execute(query);
-    
+
     return ApiResponse.success(this.toOrderResponseDto(order));
   }
 
-  @Patch(':id')
-  @CheckResourcePolicy('update', 'id')
-  async updateOrder(
-    @Param('id') orderId: string,
-    @Body() updates: UpdateOrderRequestDto,
-    @InjectAbility() ability: AppAbility
-  ): Promise<ApiResponse<OrderResponseDto>> {
+  @Patch(":id")
+  @CheckResourcePolicy("update", "id")
+  async updateOrder(@Param("id") orderId: string, @Body() updates: UpdateOrderRequestDto, @InjectAbility() ability: AppAbility): Promise<ApiResponse<OrderResponseDto>> {
     // 检查字段级权限
-    if (updates.price && !ability.can('update', 'Order', 'price')) {
-      throw new AuthorizationError('无权更新价格字段');
+    if (updates.price && !ability.can("update", "Order", "price")) {
+      throw new AuthorizationError("无权更新价格字段");
     }
 
-    if (updates.status && !ability.can('update', 'Order', 'status')) {
-      throw new AuthorizationError('无权更新状态字段');
+    if (updates.status && !ability.can("update", "Order", "status")) {
+      throw new AuthorizationError("无权更新状态字段");
     }
 
     const command = new UpdateOrderCommand(orderId, updates);
     const result = await this.commandBus.execute(command);
-    
+
     return ApiResponse.success(result);
   }
 
-  @Delete(':id')
-  @CheckResourcePolicy('delete', 'id')
-  async deleteOrder(
-    @Param('id') orderId: string
-  ): Promise<ApiResponse<void>> {
+  @Delete(":id")
+  @CheckResourcePolicy("delete", "id")
+  async deleteOrder(@Param("id") orderId: string): Promise<ApiResponse<void>> {
     const command = new DeleteOrderCommand(orderId);
     await this.commandBus.execute(command);
-    
-    return ApiResponse.empty('订单删除成功');
+
+    return ApiResponse.empty("订单删除成功");
   }
 
   // 过滤订单字段（基于权限）
   private filterOrderFields(order: Order, ability: AppAbility): any {
     const filtered: any = { id: order.id.value };
 
-    if (ability.can('read', order, 'orderNumber')) {
+    if (ability.can("read", order, "orderNumber")) {
       filtered.orderNumber = order.orderNumber;
     }
 
-    if (ability.can('read', order, 'totalAmount')) {
+    if (ability.can("read", order, "totalAmount")) {
       filtered.totalAmount = order.totalAmount;
     }
 
-    if (ability.can('read', order, 'customerInfo')) {
+    if (ability.can("read", order, "customerInfo")) {
       filtered.customerInfo = order.customerInfo;
     }
 
-    if (ability.can('read', order, 'internalNotes')) {
+    if (ability.can("read", order, "internalNotes")) {
       filtered.internalNotes = order.internalNotes;
     }
 
@@ -1183,41 +1067,35 @@ export class OrderController extends CaslAwareController {
 }
 
 // 租户管理控制器
-@Controller('tenant')
-@RequireTenantRole('OWNER')
+@Controller("tenant")
+@RequireTenantRole("OWNER")
 export class TenantManagementController extends CaslAwareController {
-  @Post('users/invite')
-  @CheckPolicies('invite', 'User')
-  async inviteUser(
-    @SecurityContext() context: SecurityContext,
-    @Body() inviteDto: InviteUserRequestDto,
-    @InjectAbility() ability: AppAbility
-  ): Promise<ApiResponse<InvitationResponseDto>> {
+  @Post("users/invite")
+  @CheckPolicies("invite", "User")
+  async inviteUser(@SecurityContext() context: SecurityContext, @Body() inviteDto: InviteUserRequestDto, @InjectAbility() ability: AppAbility): Promise<ApiResponse<InvitationResponseDto>> {
     // 检查是否可以邀请特定角色的用户
-    if (!ability.can('invite', { __typename: 'User', role: inviteDto.role })) {
+    if (!ability.can("invite", { __typename: "User", role: inviteDto.role })) {
       throw new AuthorizationError(`无权邀请 ${inviteDto.role} 角色用户`);
     }
 
     const command = new InviteUserCommand(inviteDto, context);
     const result = await this.commandBus.execute(command);
-    
+
     return ApiResponse.success(result);
   }
 
-  @Get('analytics')
-  @CheckConditionalPolicy('read', 'Analytics', (req) => ({
+  @Get("analytics")
+  @CheckConditionalPolicy("read", "Analytics", (req) => ({
     type: req.query.type,
     dateRange: {
       start: req.query.startDate,
-      end: req.query.endDate
-    }
+      end: req.query.endDate,
+    },
   }))
-  async getAnalytics(
-    @Query() query: AnalyticsQueryDto
-  ): Promise<ApiResponse<AnalyticsResponseDto>> {
+  async getAnalytics(@Query() query: AnalyticsQueryDto): Promise<ApiResponse<AnalyticsResponseDto>> {
     const analyticsQuery = new GetAnalyticsQuery(query);
     const result = await this.queryBus.execute(analyticsQuery);
-    
+
     return ApiResponse.success(result);
   }
 }
@@ -1242,22 +1120,22 @@ export class CaslExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof ForbiddenError) {
       status = HttpStatus.FORBIDDEN;
-      message = '权限不足';
-      code = 'FORBIDDEN';
-      
+      message = "权限不足";
+      code = "FORBIDDEN";
+
       this.logger.warn(`CASL ForbiddenError: ${exception.message}`, {
         userId: request.securityContext?.userId,
         action: exception.action,
-        subject: exception.subject
+        subject: exception.subject,
       });
     } else if (exception instanceof AuthorizationError) {
       status = HttpStatus.FORBIDDEN;
       message = exception.message;
-      code = 'AUTHORIZATION_ERROR';
+      code = "AUTHORIZATION_ERROR";
     } else {
       status = HttpStatus.FORBIDDEN;
-      message = '访问被拒绝';
-      code = 'ACCESS_DENIED';
+      message = "访问被拒绝";
+      code = "ACCESS_DENIED";
     }
 
     const errorResponse: ErrorResponseDto = {
@@ -1269,8 +1147,8 @@ export class CaslExceptionFilter implements ExceptionFilter {
         subject: (exception as any).subject,
         path: request.url,
         timestamp: new Date().toISOString(),
-        requestId: request.headers['x-request-id']
-      }
+        requestId: request.headers["x-request-id"],
+      },
     };
 
     response.status(status).json(errorResponse);
@@ -1292,31 +1170,27 @@ export class CaslExceptionFilter implements ExceptionFilter {
     // 能力服务
     DomainCaslAbilityFactory,
     CaslAbilityService,
-    
+
     // 查询过滤
     CaslMikroORMFilter,
-    
+
     // 审计
     CaslAuditService,
-    
+
     // 守卫和拦截器
     CaslGuard,
     AbilityInterceptor,
-    
+
     // 异常处理
     CaslExceptionFilter,
-    
+
     // 仓库
     {
       provide: PermissionPolicyRepository,
-      useClass: MikroORMPermissionPolicyRepository
-    }
+      useClass: MikroORMPermissionPolicyRepository,
+    },
   ],
-  exports: [
-    CaslAbilityService,
-    CaslMikroORMFilter,
-    DomainCaslAbilityFactory
-  ]
+  exports: [CaslAbilityService, CaslMikroORMFilter, DomainCaslAbilityFactory],
 })
 export class CaslModule {}
 
@@ -1329,17 +1203,17 @@ export class CaslModule {}
   providers: [
     {
       provide: APP_FILTER,
-      useClass: CaslExceptionFilter
+      useClass: CaslExceptionFilter,
     },
     {
       provide: APP_GUARD,
-      useClass: CaslGuard
+      useClass: CaslGuard,
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: AbilityInterceptor
-    }
-  ]
+      useClass: AbilityInterceptor,
+    },
+  ],
 })
 export class AppModule {}
 ```
@@ -1349,6 +1223,7 @@ export class AppModule {}
 基于 CASL 的多租户认证授权系统提供：
 
 ### 7.1 核心优势
+
 - **声明式权限**: 清晰、可维护的权限定义
 - **类型安全**: 完整的 TypeScript 支持
 - **复杂条件**: 支持基于时间、数量、关系的复杂权限
@@ -1356,12 +1231,14 @@ export class AppModule {}
 - **审计追踪**: 完整的权限检查日志
 
 ### 7.2 架构特点
+
 - **分层设计**: 清晰的职责分离
 - **多租户支持**: 完整的租户隔离
 - **字段级权限**: 精细化的访问控制
 - **前后端一致**: 可共享的权限逻辑
 
 ### 7.3 扩展性
+
 - **动态策略**: 运行时权限策略更新
 - **插件架构**: 可扩展的条件匹配器
 - **监控集成**: 完整的审计和监控
@@ -1369,4 +1246,5 @@ export class AppModule {}
 这套设计为企业级多租户应用提供了强大、灵活且安全的权限管理解决方案。
 
 ---
-*文档版本: 3.0 | 最后更新: 2024-11-XX | 特性: CASL 集成 + 多租户*
+
+_文档版本: 3.0 | 最后更新: 2024-11-XX | 特性: CASL 集成 + 多租户_

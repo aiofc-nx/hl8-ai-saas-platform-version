@@ -9,6 +9,7 @@
 ### 1.1 多租户领域层定位
 
 **领域层**是系统的**业务核心**和**多租户隔离基础**，在 Clean Architecture 中处于最内层，负责：
+
 - 定义多租户业务模型
 - 维护租户数据隔离规则
 - 实现跨租户的业务逻辑
@@ -34,12 +35,12 @@
 
 ```typescript
 // ✅ 可直接落地示例：基于 UUID v4 的 ID 值对象
-import { randomUUID } from 'crypto';
+import { randomUUID } from "crypto";
 
 export abstract class UuidIdentity<TIdentity extends string> {
   protected constructor(public readonly value: TIdentity) {
     if (!/^[0-9a-fA-F-]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(value)) {
-      throw new InvalidIdentityError('ID 必须符合 UUID v4 格式');
+      throw new InvalidIdentityError("ID 必须符合 UUID v4 格式");
     }
   }
 
@@ -66,7 +67,7 @@ export class TenantId extends UuidIdentity<string> {
 ```
 domain/
 ├── entities/           # 实体 (包含租户ID)
-├── aggregates/         # 聚合根 (包含租户ID)  
+├── aggregates/         # 聚合根 (包含租户ID)
 ├── value-objects/      # 值对象
 ├── domain-services/    # 领域服务 (租户感知)
 ├── domain-events/      # 领域事件 (包含租户上下文)
@@ -81,14 +82,14 @@ domain/
 
 ### 2.2 多租户组件职责
 
-| 组件类型 | 多租户职责 | 特征 |
-|---------|------------|------|
-| **聚合根** | 维护租户一致性边界 | 必须包含 `tenantId` |
-| **实体** | 归属特定租户 | 包含 `tenantId`，生命周期受租户约束 |
-| **值对象** | 租户无关的业务概念 | 无租户标识，可跨租户共享 |
-| **领域服务** | 租户感知的业务逻辑 | 接收租户上下文，处理租户特定逻辑 |
-| **领域事件** | 携带租户上下文 | 事件数据包含 `tenantId` |
-| **仓储接口** | 自动租户过滤 | 查询自动应用租户过滤条件 |
+| 组件类型     | 多租户职责         | 特征                                |
+| ------------ | ------------------ | ----------------------------------- |
+| **聚合根**   | 维护租户一致性边界 | 必须包含 `tenantId`                 |
+| **实体**     | 归属特定租户       | 包含 `tenantId`，生命周期受租户约束 |
+| **值对象**   | 租户无关的业务概念 | 无租户标识，可跨租户共享            |
+| **领域服务** | 租户感知的业务逻辑 | 接收租户上下文，处理租户特定逻辑    |
+| **领域事件** | 携带租户上下文     | 事件数据包含 `tenantId`             |
+| **仓储接口** | 自动租户过滤       | 查询自动应用租户过滤条件            |
 
 ## 🔧 多租户聚合设计规范
 
@@ -96,7 +97,7 @@ domain/
 
 ```typescript
 // 多租户聚合根基类（内置审计字段）
-import { DateTime } from 'luxon';
+import { DateTime } from "luxon";
 
 export abstract class MultiTenantAggregateRoot extends AggregateRoot {
   protected _tenantId: TenantId;
@@ -150,7 +151,7 @@ export abstract class MultiTenantAggregateRoot extends AggregateRoot {
   // 跨租户操作验证
   protected ensureSameTenant(other: MultiTenantAggregateRoot): void {
     if (!this.isInTenant(other.tenantId)) {
-      throw new CrossTenantOperationError('跨租户操作被禁止');
+      throw new CrossTenantOperationError("跨租户操作被禁止");
     }
   }
 }
@@ -163,31 +164,19 @@ export class Tenant extends MultiTenantAggregateRoot {
   private _config: TenantConfig;
   private _subscription: TenantSubscription;
 
-  constructor(
-    id: TenantId,
-    name: string,
-    subdomain: string,
-    config: TenantConfig,
-    subscription: TenantSubscription
-  ) {
+  constructor(id: TenantId, name: string, subdomain: string, config: TenantConfig, subscription: TenantSubscription) {
     super(id); // 租户自身的 tenantId 就是其 ID
     this._name = name;
     this._subdomain = subdomain;
     this._status = TenantStatus.ACTIVE;
     this._config = config;
     this._subscription = subscription;
-    
+
     this.validate();
   }
 
   public static create(registration: TenantRegistration): Tenant {
-    const tenant = new Tenant(
-      TenantId.create(),
-      registration.name,
-      registration.subdomain,
-      TenantConfig.default(),
-      TenantSubscription.freeTrial()
-    );
+    const tenant = new Tenant(TenantId.create(), registration.name, registration.subdomain, TenantConfig.default(), TenantSubscription.freeTrial());
 
     tenant.addDomainEvent(new TenantCreatedEvent(tenant.id, tenant.subdomain));
     return tenant;
@@ -227,11 +216,11 @@ export class Tenant extends MultiTenantAggregateRoot {
   // 业务验证
   private validate(): void {
     if (!this._name || this._name.trim().length === 0) {
-      throw new InvalidTenantError('租户名称不能为空');
+      throw new InvalidTenantError("租户名称不能为空");
     }
-    
+
     if (!this._subdomain || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(this._subdomain)) {
-      throw new InvalidTenantError('子域名格式不正确');
+      throw new InvalidTenantError("子域名格式不正确");
     }
   }
 
@@ -253,13 +242,7 @@ export class Organization extends MultiTenantAggregateRoot {
   private _settings: OrganizationSettings;
   private _departments: Department[] = [];
 
-  constructor(
-    id: OrganizationId,
-    tenantId: TenantId,
-    name: string,
-    code: string,
-    description: string
-  ) {
+  constructor(id: OrganizationId, tenantId: TenantId, name: string, code: string, description: string) {
     super(tenantId);
     this._id = id;
     this._name = name;
@@ -267,23 +250,14 @@ export class Organization extends MultiTenantAggregateRoot {
     this._description = description;
     this._status = OrganizationStatus.ACTIVE;
     this._settings = OrganizationSettings.default();
-    
+
     this.validate();
   }
 
   public static create(creation: OrganizationCreation): Organization {
-    const organization = new Organization(
-      OrganizationId.create(),
-      creation.tenantId,
-      creation.name,
-      creation.code,
-      creation.description
-    );
+    const organization = new Organization(OrganizationId.create(), creation.tenantId, creation.name, creation.code, creation.description);
 
-    organization.addDomainEvent(new OrganizationCreatedEvent(
-      organization.id,
-      organization.tenantId
-    ));
+    organization.addDomainEvent(new OrganizationCreatedEvent(organization.id, organization.tenantId));
     return organization;
   }
 
@@ -291,14 +265,14 @@ export class Organization extends MultiTenantAggregateRoot {
   public createDepartment(creation: DepartmentCreation & { parentDepartment?: Department }): Department {
     // 验证操作权限
     if (!this.canCreateDepartments()) {
-      throw new OrganizationOperationError('无权在组织中创建部门');
+      throw new OrganizationOperationError("无权在组织中创建部门");
     }
 
     const department = Department.create({
       ...creation,
       organizationId: this.id,
       tenantId: this.tenantId,
-      parentDepartment: creation.parentDepartment
+      parentDepartment: creation.parentDepartment,
     });
 
     this._departments.push(department);
@@ -309,10 +283,10 @@ export class Organization extends MultiTenantAggregateRoot {
   // 停用组织
   public deactivate(): void {
     this._status = OrganizationStatus.INACTIVE;
-    
+
     // 停用所有部门
-    this._departments.forEach(dept => dept.deactivate());
-    
+    this._departments.forEach((dept) => dept.deactivate());
+
     this.addDomainEvent(new OrganizationDeactivatedEvent(this.id, this.tenantId));
     this.touch();
   }
@@ -325,17 +299,16 @@ export class Organization extends MultiTenantAggregateRoot {
 
   // 验证组织操作权限
   private canCreateDepartments(): boolean {
-    return this._status === OrganizationStatus.ACTIVE && 
-           this._settings.allowDepartmentCreation;
+    return this._status === OrganizationStatus.ACTIVE && this._settings.allowDepartmentCreation;
   }
 
   private validate(): void {
     if (!this._name || this._name.trim().length === 0) {
-      throw new InvalidOrganizationError('组织名称不能为空');
+      throw new InvalidOrganizationError("组织名称不能为空");
     }
-    
+
     if (!this._code || !/^[A-Z0-9_]{3,20}$/.test(this._code)) {
-      throw new InvalidOrganizationError('组织代码格式不正确');
+      throw new InvalidOrganizationError("组织代码格式不正确");
     }
   }
 }
@@ -355,16 +328,7 @@ export class Department extends MultiTenantAggregateRoot {
   private _status: DepartmentStatus;
   private _settings: DepartmentSettings;
 
-  constructor(
-    id: DepartmentId,
-    tenantId: TenantId,
-    organizationId: OrganizationId,
-    parentDepartmentId: DepartmentId | null,
-    name: string,
-    code: string,
-    path: DepartmentPath,
-    level: number
-  ) {
+  constructor(id: DepartmentId, tenantId: TenantId, organizationId: OrganizationId, parentDepartmentId: DepartmentId | null, name: string, code: string, path: DepartmentPath, level: number) {
     super(tenantId);
     this._id = id;
     this._organizationId = organizationId;
@@ -375,49 +339,33 @@ export class Department extends MultiTenantAggregateRoot {
     this._level = level;
     this._status = DepartmentStatus.ACTIVE;
     this._settings = DepartmentSettings.default();
-    
+
     this.validate();
   }
 
   public static create(creation: DepartmentCreation & { parentDepartment?: Department }): Department {
     // ⚠️ 伪代码：如需根据 ID 查询父部门，应在应用层或领域服务中先加载并传入 parentDepartment。
-    const path = creation.parentDepartment ? 
-      creation.parentDepartment.path.createChildPath(creation.parentDepartment.id) : 
-      DepartmentPath.root();
-    
-    const level = creation.parentDepartment ? 
-      creation.parentDepartment.level + 1 : 0;
+    const path = creation.parentDepartment ? creation.parentDepartment.path.createChildPath(creation.parentDepartment.id) : DepartmentPath.root();
 
-    const department = new Department(
-      DepartmentId.create(),
-      creation.tenantId,
-      creation.organizationId,
-      creation.parentDepartment ? creation.parentDepartment.id : null,
-      creation.name,
-      creation.code,
-      path,
-      level
-    );
+    const level = creation.parentDepartment ? creation.parentDepartment.level + 1 : 0;
 
-    department.addDomainEvent(new DepartmentCreatedEvent(
-      department.id,
-      department.tenantId,
-      department.organizationId
-    ));
+    const department = new Department(DepartmentId.create(), creation.tenantId, creation.organizationId, creation.parentDepartment ? creation.parentDepartment.id : null, creation.name, creation.code, path, level);
+
+    department.addDomainEvent(new DepartmentCreatedEvent(department.id, department.tenantId, department.organizationId));
     return department;
   }
 
   // 创建子部门
   public createSubDepartment(creation: SubDepartmentCreation): Department {
     if (!this.canCreateSubDepartments()) {
-      throw new DepartmentOperationError('无权创建子部门');
+      throw new DepartmentOperationError("无权创建子部门");
     }
 
     const subDepartment = Department.create({
       ...creation,
       organizationId: this._organizationId,
       tenantId: this.tenantId,
-      parentDepartment: this
+      parentDepartment: this,
     });
 
     this.touch();
@@ -428,15 +376,15 @@ export class Department extends MultiTenantAggregateRoot {
   public moveTo(newParent: Department): void {
     // 验证租户一致性
     this.ensureSameTenant(newParent);
-    
+
     // 验证组织一致性
     if (!this._organizationId.equals(newParent.organizationId)) {
-      throw new CrossOrganizationOperationError('不能跨组织移动部门');
+      throw new CrossOrganizationOperationError("不能跨组织移动部门");
     }
 
     // 防止循环引用
     if (this.path.isAncestorOf(newParent.path)) {
-      throw new DepartmentHierarchyError('不能将部门移动到其子部门下');
+      throw new DepartmentHierarchyError("不能将部门移动到其子部门下");
     }
 
     const oldPath = this._path;
@@ -447,26 +395,18 @@ export class Department extends MultiTenantAggregateRoot {
     this._level = newParent.level + 1;
     this.touch();
 
-    this.addDomainEvent(new DepartmentMovedEvent(
-      this.id,
-      this.tenantId,
-      oldPath,
-      newPath
-    ));
+    this.addDomainEvent(new DepartmentMovedEvent(this.id, this.tenantId, oldPath, newPath));
   }
 
   // 停用部门
   public deactivate(): void {
     this._status = DepartmentStatus.INACTIVE;
-    
+
     // 递归停用子部门
     const descendants = this.getDescendants();
-    descendants.forEach(dept => dept.deactivate());
-    
-    this.addDomainEvent(new DepartmentDeactivatedEvent(
-      this.id,
-      this.tenantId
-    ));
+    descendants.forEach((dept) => dept.deactivate());
+
+    this.addDomainEvent(new DepartmentDeactivatedEvent(this.id, this.tenantId));
     this.touch();
   }
 
@@ -477,18 +417,16 @@ export class Department extends MultiTenantAggregateRoot {
   }
 
   private canCreateSubDepartments(): boolean {
-    return this._status === DepartmentStatus.ACTIVE && 
-           this._settings.allowSubDepartments &&
-           this._level < this._settings.maxDepartmentLevel;
+    return this._status === DepartmentStatus.ACTIVE && this._settings.allowSubDepartments && this._level < this._settings.maxDepartmentLevel;
   }
 
   private validate(): void {
     if (!this._name || this._name.trim().length === 0) {
-      throw new InvalidDepartmentError('部门名称不能为空');
+      throw new InvalidDepartmentError("部门名称不能为空");
     }
-    
+
     if (this._level < 0) {
-      throw new InvalidDepartmentError('部门层级不能为负数');
+      throw new InvalidDepartmentError("部门层级不能为负数");
     }
   }
 }
@@ -512,57 +450,41 @@ export class UserOrganizationAuthorization extends MultiTenantAggregateRoot {
   public joinOrganization(command: JoinOrganizationCommand): void {
     // 验证操作者权限
     if (!this.canManageOrganizationMembership(command.operatedBy)) {
-      throw new AuthorizationError('无权管理组织成员');
+      throw new AuthorizationError("无权管理组织成员");
     }
 
     if (this._organizationMemberships.has(command.organizationId.value)) {
       return; // 已存在
     }
 
-    const membership = OrganizationMembership.create(
-      this._userId,
-      command.organizationId,
-      command.roles
-    );
+    const membership = OrganizationMembership.create(this._userId, command.organizationId, command.roles);
 
     this._organizationMemberships.set(command.organizationId.value, membership);
-    
-    this.addDomainEvent(new UserJoinedOrganizationEvent(
-      this._userId,
-      command.organizationId,
-      this.tenantId,
-      command.roles,
-      command.operatedBy
-    ));
+
+    this.addDomainEvent(new UserJoinedOrganizationEvent(this._userId, command.organizationId, this.tenantId, command.roles, command.operatedBy));
   }
 
   // 加入部门
   public joinDepartment(command: JoinDepartmentCommand, department: Department): void {
     // 验证用户是否在父组织中
     if (!this._organizationMemberships.has(department.organizationId.value)) {
-      throw new AuthorizationError('用户不在该部门所属的组织中');
+      throw new AuthorizationError("用户不在该部门所属的组织中");
     }
 
     // 验证操作者权限
     if (!this.canManageDepartmentMembership(command.operatedBy, department)) {
-      throw new AuthorizationError('无权管理部门成员');
+      throw new AuthorizationError("无权管理部门成员");
     }
 
     const membership = DepartmentMembership.create({
       userId: this._userId,
       departmentId: department.id,
-      roles: command.roles
+      roles: command.roles,
     });
 
     this._departmentMemberships.set(department.id.value, membership);
-    
-    this.addDomainEvent(new UserJoinedDepartmentEvent(
-      this._userId,
-      department.id,
-      this.tenantId,
-      command.roles,
-      command.operatedBy
-    ));
+
+    this.addDomainEvent(new UserJoinedDepartmentEvent(this._userId, department.id, this.tenantId, command.roles, command.operatedBy));
   }
 
   // 检查组织权限
@@ -572,11 +494,7 @@ export class UserOrganizationAuthorization extends MultiTenantAggregateRoot {
   }
 
   // 检查部门权限 (包括继承)
-  public hasDepartmentPermission(
-    department: Department,
-    permission: Permission,
-    ancestorDepartments: Department[] = []
-  ): boolean {
+  public hasDepartmentPermission(department: Department, permission: Permission, ancestorDepartments: Department[] = []): boolean {
     // 检查直接权限
     const directMembership = this._departmentMemberships.get(department.id.value);
     if (directMembership?.hasPermission(permission)) {
@@ -605,12 +523,12 @@ export class UserOrganizationAuthorization extends MultiTenantAggregateRoot {
 
     // 组织级规则
     for (const membership of this._organizationMemberships.values()) {
-      rules.push(...await membership.toCaslRules(this.tenantId));
+      rules.push(...(await membership.toCaslRules(this.tenantId)));
     }
 
     // 部门级规则
     for (const membership of this._departmentMemberships.values()) {
-      rules.push(...await membership.toCaslRulesWithInheritance(this.tenantId));
+      rules.push(...(await membership.toCaslRulesWithInheritance(this.tenantId)));
     }
 
     return rules;
@@ -632,11 +550,7 @@ export class UserOrganizationAuthorization extends MultiTenantAggregateRoot {
 ```typescript
 // 多租户订单定价服务
 export interface MultiTenantOrderPricingService {
-  calculateOrderPrice(
-    order: Order, 
-    customer: Customer,
-    tenantContext: TenantContext
-  ): OrderPriceCalculation;
+  calculateOrderPrice(order: Order, customer: Customer, tenantContext: TenantContext): OrderPriceCalculation;
 }
 
 @DomainService()
@@ -644,61 +558,44 @@ export class DefaultMultiTenantOrderPricingService implements MultiTenantOrderPr
   constructor(
     private readonly discountPolicy: TenantAwareDiscountPolicy,
     private readonly taxPolicy: TenantAwareTaxPolicy,
-    private readonly tenantConfigService: TenantConfigService
+    private readonly tenantConfigService: TenantConfigService,
   ) {}
 
-  public calculateOrderPrice(
-    order: Order, 
-    customer: Customer,
-    tenantContext: TenantContext
-  ): OrderPriceCalculation {
-    
+  public calculateOrderPrice(order: Order, customer: Customer, tenantContext: TenantContext): OrderPriceCalculation {
     // 验证租户一致性
     if (!order.isInTenant(tenantContext.tenantId)) {
-      throw new CrossTenantOperationError('订单不属于当前租户');
+      throw new CrossTenantOperationError("订单不属于当前租户");
     }
 
     // 获取租户特定配置
     const tenantConfig = await this.tenantConfigService.getConfig(tenantContext.tenantId);
-    
+
     // 计算商品总价
-    const itemsTotal = order.items.reduce(
-      (total, item) => total.add(item.subtotal),
-      Money.zero()
-    );
+    const itemsTotal = order.items.reduce((total, item) => total.add(item.subtotal), Money.zero());
 
     // 应用租户特定的折扣策略
-    const discount = this.discountPolicy.calculateDiscount(
-      order, 
-      customer, 
-      tenantConfig
-    );
-    
+    const discount = this.discountPolicy.calculateDiscount(order, customer, tenantConfig);
+
     // 计算租户特定的税费
-    const tax = this.taxPolicy.calculateTax(
-      itemsTotal.subtract(discount.amount),
-      tenantConfig
-    );
+    const tax = this.taxPolicy.calculateTax(itemsTotal.subtract(discount.amount), tenantConfig);
 
     // 验证价格限制
     this.validatePriceLimits(itemsTotal, tenantConfig);
 
     // 计算最终价格
-    const finalAmount = itemsTotal
-      .subtract(discount.amount)
-      .add(tax.amount);
+    const finalAmount = itemsTotal.subtract(discount.amount).add(tax.amount);
 
     return new OrderPriceCalculation({
       itemsTotal,
       discount,
       tax,
-      finalAmount
+      finalAmount,
     });
   }
 
   private validatePriceLimits(total: Money, config: TenantConfig): void {
     if (config.maxOrderAmount && total.isGreaterThan(config.maxOrderAmount)) {
-      throw new OrderPriceLimitExceededError('订单金额超过租户限制');
+      throw new OrderPriceLimitExceededError("订单金额超过租户限制");
     }
   }
 }
@@ -721,7 +618,7 @@ export class DefaultTenantConfigService implements TenantConfigService {
   async getConfig(tenantId: TenantId): Promise<TenantConfig> {
     const tenant = await this.tenantRepository.findById(tenantId);
     if (!tenant) {
-      throw new TenantNotFoundError('租户不存在');
+      throw new TenantNotFoundError("租户不存在");
     }
     return tenant.config;
   }
@@ -729,14 +626,14 @@ export class DefaultTenantConfigService implements TenantConfigService {
   async updateConfig(tenantId: TenantId, updates: Partial<TenantConfig>): Promise<void> {
     const tenant = await this.tenantRepository.findById(tenantId);
     if (!tenant) {
-      throw new TenantNotFoundError('租户不存在');
+      throw new TenantNotFoundError("租户不存在");
     }
 
     const newConfig = tenant.config.merge(updates);
     const validation = this.validateConfig(newConfig);
-    
+
     if (!validation.isValid) {
-      throw new InvalidTenantConfigError(validation.errors.join(', '));
+      throw new InvalidTenantConfigError(validation.errors.join(", "));
     }
 
     tenant.updateConfig(updates);
@@ -747,16 +644,16 @@ export class DefaultTenantConfigService implements TenantConfigService {
     const errors: string[] = [];
 
     if (config.maxUsers && config.maxUsers < 1) {
-      errors.push('最大用户数必须大于0');
+      errors.push("最大用户数必须大于0");
     }
 
     if (config.maxStorageGB && config.maxStorageGB < 0) {
-      errors.push('存储空间不能为负数');
+      errors.push("存储空间不能为负数");
     }
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 }
@@ -782,7 +679,7 @@ export class TenantCreatedEvent extends MultiTenantDomainEvent {
   constructor(
     tenantId: TenantId,
     public readonly subdomain: string,
-    public readonly name: string
+    public readonly name: string,
   ) {
     super(tenantId.value, tenantId);
   }
@@ -795,13 +692,19 @@ export class TenantActivatedEvent extends MultiTenantDomainEvent {
 }
 
 export class TenantDeactivatedEvent extends MultiTenantDomainEvent {
-  constructor(tenantId: TenantId, public readonly reason: string) {
+  constructor(
+    tenantId: TenantId,
+    public readonly reason: string,
+  ) {
     super(tenantId.value, tenantId);
   }
 }
 
 export class TenantConfigUpdatedEvent extends MultiTenantDomainEvent {
-  constructor(tenantId: TenantId, public readonly config: TenantConfig) {
+  constructor(
+    tenantId: TenantId,
+    public readonly config: TenantConfig,
+  ) {
     super(tenantId.value, tenantId);
   }
 }
@@ -809,7 +712,7 @@ export class TenantConfigUpdatedEvent extends MultiTenantDomainEvent {
 export class TenantArchivedEvent extends MultiTenantDomainEvent {
   constructor(
     tenantId: TenantId,
-    public readonly reason: string
+    public readonly reason: string,
   ) {
     super(tenantId.value, tenantId);
   }
@@ -817,28 +720,19 @@ export class TenantArchivedEvent extends MultiTenantDomainEvent {
 
 // 组织创建事件
 export class OrganizationCreatedEvent extends MultiTenantDomainEvent {
-  constructor(
-    organizationId: OrganizationId,
-    tenantId: TenantId
-  ) {
+  constructor(organizationId: OrganizationId, tenantId: TenantId) {
     super(organizationId.value, tenantId);
   }
 }
 
 export class OrganizationDeactivatedEvent extends MultiTenantDomainEvent {
-  constructor(
-    organizationId: OrganizationId,
-    tenantId: TenantId
-  ) {
+  constructor(organizationId: OrganizationId, tenantId: TenantId) {
     super(organizationId.value, tenantId);
   }
 }
 
 export class OrganizationArchivedEvent extends MultiTenantDomainEvent {
-  constructor(
-    organizationId: OrganizationId,
-    tenantId: TenantId
-  ) {
+  constructor(organizationId: OrganizationId, tenantId: TenantId) {
     super(organizationId.value, tenantId);
   }
 }
@@ -850,7 +744,7 @@ export class UserJoinedOrganizationEvent extends MultiTenantDomainEvent {
     public readonly organizationId: OrganizationId,
     tenantId: TenantId,
     public readonly roles: OrganizationRole[],
-    public readonly joinedBy: UserId
+    public readonly joinedBy: UserId,
   ) {
     super(userId.value, tenantId);
   }
@@ -862,17 +756,14 @@ export class DepartmentMovedEvent extends MultiTenantDomainEvent {
     departmentId: DepartmentId,
     tenantId: TenantId,
     public readonly oldPath: DepartmentPath,
-    public readonly newPath: DepartmentPath
+    public readonly newPath: DepartmentPath,
   ) {
     super(departmentId.value, tenantId);
   }
 }
 
 export class DepartmentDeactivatedEvent extends MultiTenantDomainEvent {
-  constructor(
-    departmentId: DepartmentId,
-    tenantId: TenantId
-  ) {
+  constructor(departmentId: DepartmentId, tenantId: TenantId) {
     super(departmentId.value, tenantId);
   }
 }
@@ -881,7 +772,7 @@ export class DepartmentArchivedEvent extends MultiTenantDomainEvent {
   constructor(
     departmentId: DepartmentId,
     tenantId: TenantId,
-    public readonly organizationId: OrganizationId
+    public readonly organizationId: OrganizationId,
   ) {
     super(departmentId.value, tenantId);
   }
@@ -899,11 +790,11 @@ export interface MultiTenantRepository<T extends MultiTenantAggregateRoot> {
   findById(id: string, tenantId: TenantId): Promise<T | null>;
   findAll(tenantId: TenantId, criteria?: any): Promise<T[]>;
   exists(id: string, tenantId: TenantId): Promise<boolean>;
-  
+
   // 保存方法
   save(aggregate: T): Promise<void>;
   saveAll(aggregates: T[]): Promise<void>;
-  
+
   // 删除方法
   delete(aggregate: T): Promise<void>;
 }
@@ -944,29 +835,29 @@ export interface UserAuthorizationRepository extends MultiTenantRepository<UserO
 ### 7.1 多租户聚合测试
 
 ```typescript
-describe('Organization Aggregate (Multi-tenant)', () => {
+describe("Organization Aggregate (Multi-tenant)", () => {
   let tenant: Tenant;
   let otherTenant: Tenant;
 
   beforeEach(() => {
     tenant = Tenant.create({
-      name: '测试租户A',
-      subdomain: 'test-a'
+      name: "测试租户A",
+      subdomain: "test-a",
     });
-    
+
     otherTenant = Tenant.create({
-      name: '测试租户B', 
-      subdomain: 'test-b'
+      name: "测试租户B",
+      subdomain: "test-b",
     });
   });
 
-  describe('创建组织', () => {
-    it('应该成功创建属于指定租户的组织', () => {
+  describe("创建组织", () => {
+    it("应该成功创建属于指定租户的组织", () => {
       // When
       const organization = Organization.create({
         tenantId: tenant.id,
-        name: '测试组织',
-        code: 'TEST_ORG'
+        name: "测试组织",
+        code: "TEST_ORG",
       });
 
       // Then
@@ -974,82 +865,82 @@ describe('Organization Aggregate (Multi-tenant)', () => {
       expect(organization.isInTenant(tenant.id)).toBe(true);
     });
 
-    it('组织创建事件应该包含租户上下文', () => {
+    it("组织创建事件应该包含租户上下文", () => {
       // When
       const organization = Organization.create({
         tenantId: tenant.id,
-        name: '测试组织',
-        code: 'TEST_ORG'
+        name: "测试组织",
+        code: "TEST_ORG",
       });
 
       // Then
       const events = organization.domainEvents;
       expect(events).toHaveLength(1);
-      
+
       const createdEvent = events[0] as OrganizationCreatedEvent;
       expect(createdEvent.tenantId.equals(tenant.id)).toBe(true);
     });
   });
 
-  describe('跨租户操作', () => {
-    it('应该禁止跨租户创建部门', () => {
+  describe("跨租户操作", () => {
+    it("应该禁止跨租户创建部门", () => {
       // Given
       const organization = Organization.create({
         tenantId: tenant.id,
-        name: '测试组织',
-        code: 'TEST_ORG'
+        name: "测试组织",
+        code: "TEST_ORG",
       });
 
       const otherTenantDepartment = Department.create({
         tenantId: otherTenant.id,
         organizationId: OrganizationId.create(), // 其他组织的ID
-        name: '其他部门',
-        code: 'OTHER_DEPT'
+        name: "其他部门",
+        code: "OTHER_DEPT",
       });
 
       // When & Then
       expect(() => {
         organization.createDepartment({
           tenantId: otherTenant.id, // 错误的租户ID
-          name: '测试部门',
-          code: 'TEST_DEPT'
+          name: "测试部门",
+          code: "TEST_DEPT",
         });
       }).toThrow(CrossTenantOperationError);
     });
   });
 });
 
-describe('Department Aggregate (Multi-tenant + Hierarchy)', () => {
+describe("Department Aggregate (Multi-tenant + Hierarchy)", () => {
   let tenant: Tenant;
   let organization: Organization;
 
   beforeEach(() => {
     tenant = Tenant.create({
-      name: '测试租户',
-      subdomain: 'test'
+      name: "测试租户",
+      subdomain: "test",
     });
-    
+
     organization = Organization.create({
       tenantId: tenant.id,
-      name: '测试组织',
-      code: 'TEST_ORG'
+      name: "测试组织",
+      code: "TEST_ORG",
     });
   });
 
-  describe('部门层级操作', () => {
-    it('应该正确创建子部门并维护层级关系', async () => {
+  describe("部门层级操作", () => {
+    it("应该正确创建子部门并维护层级关系", async () => {
       // Given
       const parentDept = Department.create({
         tenantId: tenant.id,
         organizationId: organization.id,
-        name: '父部门',
-        code: 'PARENT_DEPT'
+        name: "父部门",
+        code: "PARENT_DEPT",
       });
 
       // When
       const childDept = parentDept.createSubDepartment({
-        name: '子部门',
-        code: 'CHILD_DEPT'
+        name: "子部门",
+        code: "CHILD_DEPT",
       });
 
       // Then
@@ -1059,25 +950,25 @@ describe('Department Aggregate (Multi-tenant + Hierarchy)', () => {
       expect(childDept.path.isDescendantOf(parentDept.path)).toBe(true);
     });
 
-    it('应该禁止跨租户移动部门', () => {
+    it("应该禁止跨租户移动部门", () => {
       // Given
       const otherTenant = Tenant.create({
-        name: '其他租户',
-        subdomain: 'other'
+        name: "其他租户",
+        subdomain: "other",
       });
-      
+
       const dept = Department.create({
         tenantId: tenant.id,
         organizationId: organization.id,
-        name: '测试部门',
-        code: 'TEST_DEPT'
+        name: "测试部门",
+        code: "TEST_DEPT",
       });
 
       const otherTenantDept = Department.create({
         tenantId: otherTenant.id,
         organizationId: OrganizationId.create(),
-        name: '其他部门',
-        code: 'OTHER_DEPT'
+        name: "其他部门",
+        code: "OTHER_DEPT",
       });
 
       // When & Then
@@ -1093,12 +984,12 @@ describe('Department Aggregate (Multi-tenant + Hierarchy)', () => {
 
 ### 8.1 多租户隔离策略
 
-| 场景 | 推荐方案 | 理由 |
-|------|----------|------|
-| **数据隔离** | Schema 级别隔离 | 完全的数据隔离，性能好 |
-| **租户识别** | JWT + 请求头 | 灵活支持多种客户端 |
-| **超级租户** | 特殊权限标记 | 系统级管理能力 |
-| **跨租户查询** | 显式权限检查 | 防止数据泄露 |
+| 场景           | 推荐方案        | 理由                   |
+| -------------- | --------------- | ---------------------- |
+| **数据隔离**   | Schema 级别隔离 | 完全的数据隔离，性能好 |
+| **租户识别**   | JWT + 请求头    | 灵活支持多种客户端     |
+| **超级租户**   | 特殊权限标记    | 系统级管理能力         |
+| **跨租户查询** | 显式权限检查    | 防止数据泄露           |
 
 ### 8.2 租户上下文传递
 
@@ -1108,18 +999,14 @@ export class TenantContext extends ValueObject {
   constructor(
     public readonly tenantId: TenantId,
     public readonly tenantName: string,
-    public readonly isSuperAdmin: boolean = false
+    public readonly isSuperAdmin: boolean = false,
   ) {
     super();
   }
 
   // 创建超级管理员上下文
   static superAdmin(): TenantContext {
-    return new TenantContext(
-      TenantId.create('system'),
-      'System',
-      true
-    );
+    return new TenantContext(TenantId.create("system"), "System", true);
   }
 
   // 检查跨租户权限
@@ -1144,7 +1031,7 @@ export abstract class MultiTenantEventSourcedAggregateRoot extends MultiTenantAg
   protected applyEvent(event: MultiTenantDomainEvent): void {
     // 验证事件租户一致性
     if (!this.tenantId.equals(event.tenantId)) {
-      throw new CrossTenantEventError('事件租户与聚合根租户不一致');
+      throw new CrossTenantEventError("事件租户与聚合根租户不一致");
     }
 
     this._version++;
@@ -1152,18 +1039,15 @@ export abstract class MultiTenantEventSourcedAggregateRoot extends MultiTenantAg
   }
 
   // 从历史事件重建
-  public static reconstitute<T extends MultiTenantEventSourcedAggregateRoot>(
-    this: new (...args: any[]) => T,
-    events: MultiTenantDomainEvent[]
-  ): T {
+  public static reconstitute<T extends MultiTenantEventSourcedAggregateRoot>(this: new (...args: any[]) => T, events: MultiTenantDomainEvent[]): T {
     if (events.length === 0) {
-      throw new EmptyEventStreamError('事件流不能为空');
+      throw new EmptyEventStreamError("事件流不能为空");
     }
 
     const firstEvent = events[0];
     const aggregate = new this(firstEvent.tenantId);
-    
-    events.forEach(event => {
+
+    events.forEach((event) => {
       aggregate.applyEvent(event);
     });
 
@@ -1199,4 +1083,5 @@ export abstract class MultiTenantEventSourcedAggregateRoot extends MultiTenantAg
 这套多租户领域层设计为企业级 SaaS 应用提供了安全、可扩展的领域模型基础。
 
 ---
-*文档版本: 2.0 | 最后更新: 2024-11-XX | 特性: 多租户增强 + 数据隔离*
+
+_文档版本: 2.0 | 最后更新: 2024-11-XX | 特性: 多租户增强 + 数据隔离_

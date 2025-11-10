@@ -47,7 +47,7 @@ export class MikroOrmOrderRepository implements OrderRepository {
     private readonly em: EntityManager,
     private readonly orderMapper: OrderMapper,
     private readonly eventStore: DomainEventStore,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   async findById(id: OrderId): Promise<Order | null> {
@@ -61,8 +61,8 @@ export class MikroOrmOrderRepository implements OrderRepository {
 
       // 快照方式：从数据库实体转换
       const orderEntity = await this.em.findOne(OrderEntity, id.value, {
-        populate: ['items', 'payments'],
-        refresh: true
+        populate: ["items", "payments"],
+        refresh: true,
       });
 
       if (!orderEntity) {
@@ -70,16 +70,15 @@ export class MikroOrmOrderRepository implements OrderRepository {
       }
 
       return this.orderMapper.toDomain(orderEntity);
-
     } catch (error) {
       this.logger.error(`Failed to find order by id: ${id.value}`, error);
-      throw new RepositoryError('查询订单失败', error);
+      throw new RepositoryError("查询订单失败", error);
     }
   }
 
   async save(order: Order): Promise<void> {
     const strategy = await this.selectPersistenceStrategy(order);
-    
+
     await this.em.transactional(async (em) => {
       // 保存领域事件到事件存储
       if (order.domainEvents.length > 0) {
@@ -89,13 +88,13 @@ export class MikroOrmOrderRepository implements OrderRepository {
 
       // 根据策略保存状态快照
       switch (strategy) {
-        case 'event-sourcing-only':
+        case "event-sourcing-only":
           // 仅事件溯源，不保存快照
           break;
-        case 'snapshot-only':
+        case "snapshot-only":
           await this.saveSnapshot(order, em);
           break;
-        case 'both':
+        case "both":
           await this.saveSnapshot(order, em);
           break;
       }
@@ -105,20 +104,20 @@ export class MikroOrmOrderRepository implements OrderRepository {
   private async selectPersistenceStrategy(order: Order): Promise<PersistenceStrategy> {
     // 根据业务规则选择持久化策略
     if (order.version < 10) {
-      return 'both'; // 新聚合同时保存事件和快照
+      return "both"; // 新聚合同时保存事件和快照
     }
-    
+
     const eventCount = await this.eventStore.getEventCount(order.id.value);
     if (eventCount > 100) {
-      return 'snapshot-only'; // 事件太多时只保存快照
+      return "snapshot-only"; // 事件太多时只保存快照
     }
-    
-    return 'event-sourcing-only'; // 默认仅事件溯源
+
+    return "event-sourcing-only"; // 默认仅事件溯源
   }
 
   private async saveSnapshot(order: Order, em: EntityManager): Promise<void> {
     const orderEntity = this.orderMapper.toPersistence(order);
-    
+
     // 使用 MikroORM 的 Unit of Work 管理实体状态
     if (await em.exists(OrderEntity, order.id.value)) {
       em.assign(orderEntity, this.orderMapper.toPersistence(order));
@@ -131,17 +130,16 @@ export class MikroOrmOrderRepository implements OrderRepository {
   }
 
   async findByCustomerId(customerId: CustomerId): Promise<Order[]> {
-    const orderEntities = await this.em.find(OrderEntity, 
+    const orderEntities = await this.em.find(
+      OrderEntity,
       { customerId: customerId.value },
-      { 
+      {
         orderBy: { createdAt: QueryOrder.DESC },
-        populate: ['items']
-      }
+        populate: ["items"],
+      },
     );
 
-    return Promise.all(
-      orderEntities.map(entity => this.orderMapper.toDomain(entity))
-    );
+    return Promise.all(orderEntities.map((entity) => this.orderMapper.toDomain(entity)));
   }
 
   async delete(order: Order): Promise<void> {
@@ -273,7 +271,7 @@ export class EventEntity {
 export class OrderMapper {
   constructor(
     private readonly orderItemMapper: OrderItemMapper,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   toDomain(entity: OrderEntity): Order {
@@ -283,20 +281,17 @@ export class OrderMapper {
         customerId: CustomerId.create(entity.customerId),
         status: entity.status as OrderStatus,
         totalAmount: new Money(entity.totalAmount, entity.currency),
-        items: entity.items.getItems().map(item => 
-          this.orderItemMapper.toDomain(item)
-        ),
+        items: entity.items.getItems().map((item) => this.orderItemMapper.toDomain(item)),
         metadata: entity.metadata,
         createdAt: DateTime.fromJSDate(entity.createdAt),
         updatedAt: DateTime.fromJSDate(entity.updatedAt),
-        version: entity.version
+        version: entity.version,
       };
 
       return Order.reconstituteFromSnapshot(orderProps);
-
     } catch (error) {
-      this.logger.error('Failed to map OrderEntity to Domain', error);
-      throw new MappingError('订单实体映射失败', error);
+      this.logger.error("Failed to map OrderEntity to Domain", error);
+      throw new MappingError("订单实体映射失败", error);
     }
   }
 
@@ -309,12 +304,10 @@ export class OrderMapper {
     entity.currency = order.totalAmount.currency;
     entity.metadata = order.metadata;
     entity.version = order.version;
-    
+
     // 处理集合映射
     if (order.items.length > 0) {
-      entity.items.set(
-        order.items.map(item => this.orderItemMapper.toPersistence(item, order.id))
-      );
+      entity.items.set(order.items.map((item) => this.orderItemMapper.toPersistence(item, order.id)));
     }
 
     return entity;
@@ -333,53 +326,53 @@ export class OrderMapper {
 // mikro-orm.config.ts
 export default defineConfig({
   entities: [OrderEntity, OrderItemEntity, EventEntity],
-  entitiesTs: ['./src/infrastructure/persistence/entities'],
+  entitiesTs: ["./src/infrastructure/persistence/entities"],
   dbName: process.env.DB_NAME,
   host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
+  port: parseInt(process.env.DB_PORT || "5432"),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  type: 'postgresql',
-  
+  type: "postgresql",
+
   // 开发配置
-  debug: process.env.NODE_ENV === 'development',
+  debug: process.env.NODE_ENV === "development",
   logger: console.log.bind(console),
-  
+
   // 迁移配置
   migrations: {
-    path: './src/infrastructure/persistence/migrations',
+    path: "./src/infrastructure/persistence/migrations",
     pattern: /^[\w-]+\d+\.ts$/,
     transactional: true,
     disableForeignKeys: false,
     allOrNothing: true,
     dropTables: false,
   },
-  
+
   // 持久化配置
   persistAndFlush: false, // 手动控制 flush
-  
+
   // 性能优化
   batchSize: 500, // 批量操作大小
   loadStrategy: LoadStrategy.JOINED,
-  
+
   // 缓存配置
   resultCache: {
     expiration: 1000 * 60 * 5, // 5分钟
   },
-  
+
   // 连接池配置
   pool: {
     min: 2,
     max: 10,
   },
-  
+
   // 架构配置
-  schema: process.env.DB_SCHEMA || 'public',
-  
+  schema: process.env.DB_SCHEMA || "public",
+
   // 驱动选项
   driverOptions: {
     connection: {
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
     },
   },
 } as Options);
@@ -393,7 +386,7 @@ export class MikroOrmEventStore implements DomainEventStore {
   constructor(
     private readonly em: EntityManager,
     private readonly eventSerializer: EventSerializer,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   async saveEvents(aggregateId: string, events: DomainEvent[]): Promise<void> {
@@ -413,22 +406,21 @@ export class MikroOrmEventStore implements DomainEventStore {
 
     // 批量插入事件
     await this.em.persistAndFlush(eventEntities);
-    
+
     this.logger.debug(`Saved ${events.length} events for aggregate ${aggregateId}`);
   }
 
   async getEvents(aggregateId: string): Promise<DomainEvent[]> {
-    const eventEntities = await this.em.find(EventEntity, 
+    const eventEntities = await this.em.find(
+      EventEntity,
       { aggregateId },
-      { 
+      {
         orderBy: { version: QueryOrder.ASC },
-        cache: 1000 * 60 * 5 // 5分钟缓存
-      }
+        cache: 1000 * 60 * 5, // 5分钟缓存
+      },
     );
 
-    return eventEntities.map(entity => 
-      this.eventSerializer.deserialize(entity.eventData, entity.eventType)
-    );
+    return eventEntities.map((entity) => this.eventSerializer.deserialize(entity.eventData, entity.eventType));
   }
 
   async getEventsByType(eventType: string, since?: Date): Promise<DomainEvent[]> {
@@ -438,12 +430,10 @@ export class MikroOrmEventStore implements DomainEventStore {
     }
 
     const eventEntities = await this.em.find(EventEntity, where, {
-      orderBy: { occurredOn: QueryOrder.ASC }
+      orderBy: { occurredOn: QueryOrder.ASC },
     });
 
-    return eventEntities.map(entity =>
-      this.eventSerializer.deserialize(entity.eventData, entity.eventType)
-    );
+    return eventEntities.map((entity) => this.eventSerializer.deserialize(entity.eventData, entity.eventType));
   }
 
   async getEventCount(aggregateId: string): Promise<number> {
@@ -452,7 +442,7 @@ export class MikroOrmEventStore implements DomainEventStore {
 
   private getAggregateType(event: DomainEvent): string {
     // 从事件类型推断聚合类型
-    return event.constructor.name.replace(/Event$/, '');
+    return event.constructor.name.replace(/Event$/, "");
   }
 }
 ```
@@ -466,10 +456,7 @@ export class MikroOrmEventStore implements DomainEventStore {
 export class TransactionalService {
   constructor(private readonly em: EntityManager) {}
 
-  async executeInTransaction<T>(
-    work: (em: EntityManager) => Promise<T>,
-    options: { isolationLevel?: IsolationLevel } = {}
-  ): Promise<T> {
+  async executeInTransaction<T>(work: (em: EntityManager) => Promise<T>, options: { isolationLevel?: IsolationLevel } = {}): Promise<T> {
     return await this.em.transactional(async (em) => {
       return await work(em);
     }, options);
@@ -477,18 +464,21 @@ export class TransactionalService {
 
   // 针对特定业务场景的事务封装
   async placeOrderTransaction(order: Order, payment: Payment): Promise<void> {
-    await this.executeInTransaction(async (em) => {
-      // 保存订单
-      const orderRepository = em.getRepository(OrderEntity);
-      await orderRepository.persistAndFlush(this.orderMapper.toPersistence(order));
-      
-      // 保存支付记录
-      const paymentRepository = em.getRepository(PaymentEntity);
-      await paymentRepository.persistAndFlush(this.paymentMapper.toPersistence(payment));
-      
-      // 发布领域事件
-      await this.eventPublisher.publishAll(order.domainEvents);
-    }, { isolationLevel: IsolationLevel.READ_COMMITTED });
+    await this.executeInTransaction(
+      async (em) => {
+        // 保存订单
+        const orderRepository = em.getRepository(OrderEntity);
+        await orderRepository.persistAndFlush(this.orderMapper.toPersistence(order));
+
+        // 保存支付记录
+        const paymentRepository = em.getRepository(PaymentEntity);
+        await paymentRepository.persistAndFlush(this.paymentMapper.toPersistence(payment));
+
+        // 发布领域事件
+        await this.eventPublisher.publishAll(order.domainEvents);
+      },
+      { isolationLevel: IsolationLevel.READ_COMMITTED },
+    );
   }
 }
 ```
@@ -501,27 +491,19 @@ export class OrderQueryService {
   constructor(private readonly em: EntityManager) {}
 
   async findOrdersWithDetails(criteria: OrderQueryCriteria): Promise<OrderView[]> {
-    const qb = this.em.createQueryBuilder(OrderEntity, 'o');
-    
-    qb.select([
-      'o.id',
-      'o.status',
-      'o.totalAmount',
-      'o.currency',
-      'o.createdAt',
-      'c.name as customerName',
-      'COUNT(i.id) as itemCount'
-    ])
-    .leftJoin('o.customer', 'c')
-    .leftJoin('o.items', 'i')
-    .where(this.buildWhereClause(criteria))
-    .groupBy('o.id', 'c.name')
-    .orderBy({ 'o.createdAt': QueryOrder.DESC })
-    .limit(criteria.limit || 50)
-    .offset(criteria.offset || 0);
+    const qb = this.em.createQueryBuilder(OrderEntity, "o");
+
+    qb.select(["o.id", "o.status", "o.totalAmount", "o.currency", "o.createdAt", "c.name as customerName", "COUNT(i.id) as itemCount"])
+      .leftJoin("o.customer", "c")
+      .leftJoin("o.items", "i")
+      .where(this.buildWhereClause(criteria))
+      .groupBy("o.id", "c.name")
+      .orderBy({ "o.createdAt": QueryOrder.DESC })
+      .limit(criteria.limit || 50)
+      .offset(criteria.offset || 0);
 
     // 使用索引提示
-    qb.setHint('idx_order_query_optimized');
+    qb.setHint("idx_order_query_optimized");
 
     const results = await qb.getResult();
     return results.map(this.toOrderView);
@@ -529,19 +511,19 @@ export class OrderQueryService {
 
   private buildWhereClause(criteria: OrderQueryCriteria): any {
     const where: any = {};
-    
+
     if (criteria.customerId) {
       where.customerId = criteria.customerId;
     }
-    
+
     if (criteria.status) {
       where.status = { $in: criteria.status };
     }
-    
+
     if (criteria.dateRange) {
       where.createdAt = {
         $gte: criteria.dateRange.start,
-        $lte: criteria.dateRange.end
+        $lte: criteria.dateRange.end,
       };
     }
 
@@ -555,7 +537,7 @@ export class OrderQueryService {
 ### 5.1 仓储测试
 
 ```typescript
-describe('MikroOrmOrderRepository', () => {
+describe("MikroOrmOrderRepository", () => {
   let repository: MikroOrmOrderRepository;
   let em: EntityManager;
   let orm: MikroORM;
@@ -563,8 +545,8 @@ describe('MikroOrmOrderRepository', () => {
   beforeAll(async () => {
     orm = await MikroORM.init({
       entities: [OrderEntity, OrderItemEntity],
-      dbName: 'test_db',
-      type: 'postgresql',
+      dbName: "test_db",
+      type: "postgresql",
       // 测试专用配置
     });
     em = orm.em.fork();
@@ -580,29 +562,29 @@ describe('MikroOrmOrderRepository', () => {
     await em.nativeDelete(OrderItemEntity, {});
   });
 
-  it('应该使用 Unit of Work 正确保存订单', async () => {
+  it("应该使用 Unit of Work 正确保存订单", async () => {
     // Given
     const order = Order.create(/* ... */);
-    
+
     // When
     await repository.save(order);
-    
+
     // Then
     const savedEntity = await em.findOne(OrderEntity, order.id.value);
     expect(savedEntity).toBeDefined();
     expect(savedEntity.totalAmount).toBe(order.totalAmount.amount);
   });
 
-  it('应该正确处理集合的级联操作', async () => {
+  it("应该正确处理集合的级联操作", async () => {
     // Given
     const order = Order.create(/* 包含订单项 */);
-    
+
     // When
     await repository.save(order);
-    
+
     // Then
     const savedEntity = await em.findOne(OrderEntity, order.id.value, {
-      populate: ['items']
+      populate: ["items"],
     });
     expect(savedEntity.items.length).toBe(order.items.length);
   });
@@ -613,12 +595,12 @@ describe('MikroOrmOrderRepository', () => {
 
 ### 6.1 配置决策
 
-| 配置项 | 推荐值 | 理由 |
-|--------|--------|------|
-| **loadStrategy** | `LoadStrategy.JOINED` | 更好的类型安全和查询性能 |
-| **persistAndFlush** | `false` | 手动控制 flush，更好的性能 |
-| **batchSize** | `500` | 平衡内存使用和性能 |
-| **resultCache** | `5分钟` | 减少重复查询 |
+| 配置项              | 推荐值                | 理由                       |
+| ------------------- | --------------------- | -------------------------- |
+| **loadStrategy**    | `LoadStrategy.JOINED` | 更好的类型安全和查询性能   |
+| **persistAndFlush** | `false`               | 手动控制 flush，更好的性能 |
+| **batchSize**       | `500`                 | 平衡内存使用和性能         |
+| **resultCache**     | `5分钟`               | 减少重复查询               |
 
 ### 6.2 性能优化策略
 
@@ -630,10 +612,10 @@ export class BatchOperationService {
 
   async batchInsertOrders(orders: Order[]): Promise<void> {
     const chunks = this.chunkArray(orders, 100); // 每批100条
-    
+
     for (const chunk of chunks) {
       await this.em.transactional(async (em) => {
-        const entities = chunk.map(order => this.orderMapper.toPersistence(order));
+        const entities = chunk.map((order) => this.orderMapper.toPersistence(order));
         em.persist(entities);
         await em.flush();
       });
@@ -663,4 +645,5 @@ export class BatchOperationService {
 遵循本规范可以构建出高性能、可维护且与 MikroORM 深度集成的基础设施层。
 
 ---
-*文档版本: 1.0 | 最后更新: 2024-11-XX | 适用项目: DDD 混合架构项目 (MikroORM + PostgreSQL)*
+
+_文档版本: 1.0 | 最后更新: 2024-11-XX | 适用项目: DDD 混合架构项目 (MikroORM + PostgreSQL)_

@@ -9,6 +9,7 @@
 ### 1.1 多租户模式选择
 
 本项目采用 **数据库级别隔离** 模式：
+
 - 每个租户拥有独立的数据库 schema
 - 共享应用实例，数据完全隔离
 - 通过租户上下文自动路由数据访问
@@ -35,23 +36,14 @@ export class Tenant extends AggregateRoot {
     private config: TenantConfig,
     private subscription: TenantSubscription,
     private createdAt: DateTime,
-    private updatedAt: DateTime
+    private updatedAt: DateTime,
   ) {
     super();
   }
 
   // 创建新租户
   public static create(registration: TenantRegistration): Tenant {
-    const tenant = new Tenant(
-      TenantId.create(),
-      registration.name,
-      registration.subdomain,
-      TenantStatus.ACTIVE,
-      TenantConfig.default(),
-      TenantSubscription.freeTrial(),
-      DateTime.now(),
-      DateTime.now()
-    );
+    const tenant = new Tenant(TenantId.create(), registration.name, registration.subdomain, TenantStatus.ACTIVE, TenantConfig.default(), TenantSubscription.freeTrial(), DateTime.now(), DateTime.now());
 
     tenant.addDomainEvent(new TenantCreatedEvent(tenant.id, tenant.subdomain));
     return tenant;
@@ -102,28 +94,14 @@ export class TenantUser extends AggregateRoot {
     private permissions: TenantPermission[],
     private status: TenantUserStatus,
     private joinedAt: DateTime,
-    private invitedBy?: UserId
+    private invitedBy?: UserId,
   ) {
     super();
   }
 
   // 邀请用户到租户
-  public static invite(
-    tenantId: TenantId,
-    userId: UserId,
-    roles: TenantRole[],
-    invitedBy: UserId
-  ): TenantUser {
-    const tenantUser = new TenantUser(
-      TenantUserId.create(),
-      tenantId,
-      userId,
-      roles,
-      [],
-      TenantUserStatus.INVITED,
-      DateTime.now(),
-      invitedBy
-    );
+  public static invite(tenantId: TenantId, userId: UserId, roles: TenantRole[], invitedBy: UserId): TenantUser {
+    const tenantUser = new TenantUser(TenantUserId.create(), tenantId, userId, roles, [], TenantUserStatus.INVITED, DateTime.now(), invitedBy);
 
     tenantUser.addDomainEvent(new UserInvitedToTenantEvent(tenantId, userId, invitedBy));
     return tenantUser;
@@ -137,7 +115,7 @@ export class TenantUser extends AggregateRoot {
 
   // 分配角色
   public assignRole(role: TenantRole, assignedBy: UserId): void {
-    if (this.roles.some(r => r.equals(role))) {
+    if (this.roles.some((r) => r.equals(role))) {
       return;
     }
 
@@ -147,13 +125,12 @@ export class TenantUser extends AggregateRoot {
 
   // 检查租户权限
   public hasTenantPermission(permission: TenantPermission): boolean {
-    return this.permissions.includes(permission) || 
-           this.roles.some(role => role.hasPermission(permission));
+    return this.permissions.includes(permission) || this.roles.some((role) => role.hasPermission(permission));
   }
 
   // 检查租户角色
   public hasTenantRole(role: TenantRole): boolean {
-    return this.roles.some(r => r.equals(role));
+    return this.roles.some((r) => r.equals(role));
   }
 }
 
@@ -163,7 +140,7 @@ export class TenantRole extends ValueObject {
     public readonly tenantId: TenantId,
     public readonly name: string,
     public readonly permissions: TenantPermission[],
-    public readonly isSystem: boolean = false
+    public readonly isSystem: boolean = false,
   ) {
     super();
   }
@@ -174,28 +151,15 @@ export class TenantRole extends ValueObject {
 
   // 预定义租户角色
   static owner(tenantId: TenantId): TenantRole {
-    return new TenantRole(tenantId, 'OWNER', [
-      TenantPermission.USER_MANAGE,
-      TenantPermission.ROLE_MANAGE,
-      TenantPermission.BILLING_MANAGE,
-      TenantPermission.SETTINGS_MANAGE
-    ], true);
+    return new TenantRole(tenantId, "OWNER", [TenantPermission.USER_MANAGE, TenantPermission.ROLE_MANAGE, TenantPermission.BILLING_MANAGE, TenantPermission.SETTINGS_MANAGE], true);
   }
 
   static admin(tenantId: TenantId): TenantRole {
-    return new TenantRole(tenantId, 'ADMIN', [
-      TenantPermission.USER_MANAGE,
-      TenantPermission.ORDER_MANAGE,
-      TenantPermission.PRODUCT_MANAGE
-    ], true);
+    return new TenantRole(tenantId, "ADMIN", [TenantPermission.USER_MANAGE, TenantPermission.ORDER_MANAGE, TenantPermission.PRODUCT_MANAGE], true);
   }
 
   static member(tenantId: TenantId): TenantRole {
-    return new TenantRole(tenantId, 'MEMBER', [
-      TenantPermission.ORDER_CREATE,
-      TenantPermission.ORDER_VIEW_OWN,
-      TenantPermission.PROFILE_VIEW
-    ], true);
+    return new TenantRole(tenantId, "MEMBER", [TenantPermission.ORDER_CREATE, TenantPermission.ORDER_VIEW_OWN, TenantPermission.PROFILE_VIEW], true);
   }
 }
 ```
@@ -211,13 +175,8 @@ export interface MultiTenantAuthenticationService {
 
 // 多租户授权服务
 export interface MultiTenantAuthorizationService {
-  checkTenantPermission(
-    user: User, 
-    tenant: Tenant, 
-    permission: TenantPermission, 
-    resource?: Resource
-  ): Promise<boolean>;
-  
+  checkTenantPermission(user: User, tenant: Tenant, permission: TenantPermission, resource?: Resource): Promise<boolean>;
+
   getUserTenants(userId: UserId): Promise<Tenant[]>;
   getUserTenantPermissions(userId: UserId, tenantId: TenantId): Promise<TenantPermission[]>;
 }
@@ -229,32 +188,32 @@ export class DefaultMultiTenantAuthService implements MultiTenantAuthenticationS
     private readonly userRepository: UserRepository,
     private readonly tenantRepository: TenantRepository,
     private readonly tenantUserRepository: TenantUserRepository,
-    private readonly passwordHasher: PasswordHasher
+    private readonly passwordHasher: PasswordHasher,
   ) {}
 
   async authenticate(credentials: LoginCredentials, tenantId: TenantId): Promise<User> {
     // 1. 验证租户
     const tenant = await this.tenantRepository.findById(tenantId);
     if (!tenant || !tenant.canLogin()) {
-      throw new TenantNotAccessibleError('租户不可用');
+      throw new TenantNotAccessibleError("租户不可用");
     }
 
     // 2. 验证用户
     const user = await this.userRepository.findByEmail(credentials.email);
     if (!user) {
-      throw new InvalidCredentialsError('用户名或密码错误');
+      throw new InvalidCredentialsError("用户名或密码错误");
     }
 
     // 3. 验证用户属于该租户
     const tenantUser = await this.tenantUserRepository.findByUserAndTenant(user.id, tenantId);
     if (!tenantUser || tenantUser.status !== TenantUserStatus.ACTIVE) {
-      throw new UserNotInTenantError('用户不属于该租户');
+      throw new UserNotInTenantError("用户不属于该租户");
     }
 
     // 4. 验证密码
     const isValid = await user.authenticate(credentials.password);
     if (!isValid) {
-      throw new InvalidCredentialsError('用户名或密码错误');
+      throw new InvalidCredentialsError("用户名或密码错误");
     }
 
     return user;
@@ -264,20 +223,17 @@ export class DefaultMultiTenantAuthService implements MultiTenantAuthenticationS
     // 实现令牌验证逻辑，返回用户和租户信息
     const tokenService = new JwtTokenService(/* ... */);
     const payload = await tokenService.verifyAccessToken(token);
-    
-    const [user, tenant] = await Promise.all([
-      this.userRepository.findById(UserId.create(payload.sub)),
-      this.tenantRepository.findById(TenantId.create(payload.tenantId))
-    ]);
+
+    const [user, tenant] = await Promise.all([this.userRepository.findById(UserId.create(payload.sub)), this.tenantRepository.findById(TenantId.create(payload.tenantId))]);
 
     if (!user || !tenant) {
-      throw new InvalidTokenError('令牌无效');
+      throw new InvalidTokenError("令牌无效");
     }
 
     // 验证用户仍属于租户
     const tenantUser = await this.tenantUserRepository.findByUserAndTenant(user.id, tenant.id);
     if (!tenantUser || tenantUser.status !== TenantUserStatus.ACTIVE) {
-      throw new UserNotInTenantError('用户已从租户中移除');
+      throw new UserNotInTenantError("用户已从租户中移除");
     }
 
     return { user, tenant };
@@ -303,27 +259,22 @@ export class MultiTenantSecurityContext {
     public readonly globalPermissions: string[],
     public readonly sessionId: string,
     public readonly ipAddress: string,
-    public readonly userAgent: string
+    public readonly userAgent: string,
   ) {}
 
-  static fromUserAndTenant(
-    user: User, 
-    tenant: Tenant, 
-    tenantUser: TenantUser,
-    additionalInfo: Partial<MultiTenantSecurityContext> = {}
-  ): MultiTenantSecurityContext {
+  static fromUserAndTenant(user: User, tenant: Tenant, tenantUser: TenantUser, additionalInfo: Partial<MultiTenantSecurityContext> = {}): MultiTenantSecurityContext {
     return new MultiTenantSecurityContext(
       user.id.value,
       user.email.value,
       tenant.id.value,
       tenant.name,
-      tenantUser.roles.map(role => role.name),
-      tenantUser.permissions.map(p => p.toString()),
-      user.roles.map(role => role.name),
-      user.permissions.map(p => p.toString()),
+      tenantUser.roles.map((role) => role.name),
+      tenantUser.permissions.map((p) => p.toString()),
+      user.roles.map((role) => role.name),
+      user.permissions.map((p) => p.toString()),
       additionalInfo.sessionId || ulid(),
-      additionalInfo.ipAddress || '',
-      additionalInfo.userAgent || ''
+      additionalInfo.ipAddress || "",
+      additionalInfo.userAgent || "",
     );
   }
 
@@ -342,11 +293,11 @@ export class MultiTenantSecurityContext {
   }
 
   isTenantOwner(): boolean {
-    return this.hasTenantRole('OWNER');
+    return this.hasTenantRole("OWNER");
   }
 
   isSuperAdmin(): boolean {
-    return this.hasGlobalRole('SUPER_ADMIN');
+    return this.hasGlobalRole("SUPER_ADMIN");
   }
 
   // 获取当前租户ID
@@ -365,19 +316,19 @@ export class MultiTenantLoginHandler implements ICommandHandler<MultiTenantLogin
   constructor(
     private readonly multiTenantAuthService: MultiTenantAuthenticationService,
     private readonly tokenService: TokenService,
-    private readonly eventPublisher: EventPublisher
+    private readonly eventPublisher: EventPublisher,
   ) {}
 
   async execute(command: MultiTenantLoginCommand): Promise<LoginResult> {
     const tenantId = TenantId.create(command.tenantIdentifier);
-    
+
     // 使用多租户认证服务
     const user = await this.multiTenantAuthService.authenticate(
       {
         email: command.email,
-        password: command.password
+        password: command.password,
       },
-      tenantId
+      tenantId,
     );
 
     // 获取租户信息
@@ -399,16 +350,16 @@ export class MultiTenantLoginHandler implements ICommandHandler<MultiTenantLogin
 export class SwitchTenantHandler implements ICommandHandler<SwitchTenantCommand> {
   constructor(
     private readonly multiTenantAuthService: MultiTenantAuthorizationService,
-    private readonly tokenService: TokenService
+    private readonly tokenService: TokenService,
   ) {}
 
   async execute(command: SwitchTenantCommand): Promise<TokenPair> {
     // 验证用户有权访问目标租户
     const userTenants = await this.multiTenantAuthService.getUserTenants(command.context.userId);
-    const targetTenant = userTenants.find(t => t.id.value === command.targetTenantId);
-    
+    const targetTenant = userTenants.find((t) => t.id.value === command.targetTenantId);
+
     if (!targetTenant) {
-      throw new TenantAccessDeniedError('无权访问该租户');
+      throw new TenantAccessDeniedError("无权访问该租户");
     }
 
     // 生成新令牌
@@ -427,11 +378,8 @@ export class SwitchTenantHandler implements ICommandHandler<SwitchTenantCommand>
 export class MultiTenantJwtTokenService implements TokenService {
   async generateMultiTenantTokenPair(user: User, tenant: Tenant): Promise<TokenPair> {
     const payload = this.buildMultiTenantTokenPayload(user, tenant);
-    
-    const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken(payload),
-      this.generateRefreshToken(payload)
-    ]);
+
+    const [accessToken, refreshToken] = await Promise.all([this.generateAccessToken(payload), this.generateRefreshToken(payload)]);
 
     return { accessToken, refreshToken };
   }
@@ -439,18 +387,18 @@ export class MultiTenantJwtTokenService implements TokenService {
   private buildMultiTenantTokenPayload(user: User, tenant: Tenant): any {
     // 获取租户特定权限
     const tenantUser = await this.tenantUserRepository.findByUserAndTenant(user.id, tenant.id);
-    
+
     return {
       sub: user.id.value,
       email: user.email.value,
       tenantId: tenant.id.value,
       tenantName: tenant.name,
-      tenantRoles: tenantUser.roles.map(role => role.name),
-      tenantPermissions: tenantUser.permissions.map(p => p.toString()),
-      globalRoles: user.roles.map(role => role.name),
-      globalPermissions: user.permissions.map(p => p.toString()),
-      iss: 'multi-tenant-system',
-      iat: Math.floor(Date.now() / 1000)
+      tenantRoles: tenantUser.roles.map((role) => role.name),
+      tenantPermissions: tenantUser.permissions.map((p) => p.toString()),
+      globalRoles: user.roles.map((role) => role.name),
+      globalPermissions: user.permissions.map((p) => p.toString()),
+      iss: "multi-tenant-system",
+      iat: Math.floor(Date.now() / 1000),
     };
   }
 
@@ -461,14 +409,14 @@ export class MultiTenantJwtTokenService implements TokenService {
 
   private validateMultiTenantPayload(payload: any): MultiTenantTokenPayload {
     if (!payload.tenantId) {
-      throw new InvalidTokenError('缺少租户信息');
+      throw new InvalidTokenError("缺少租户信息");
     }
 
     return {
       ...payload,
       tenantId: payload.tenantId,
       tenantRoles: payload.tenantRoles || [],
-      tenantPermissions: payload.tenantPermissions || []
+      tenantPermissions: payload.tenantPermissions || [],
     };
   }
 }
@@ -481,20 +429,20 @@ export class MultiTenantJwtTokenService implements TokenService {
 export class TenantAwareDataSource implements DataSource {
   constructor(
     private readonly dataSourceFactory: DataSourceFactory,
-    private readonly tenantContext: TenantContext
+    private readonly tenantContext: TenantContext,
   ) {}
 
   async getRepository<T>(entityClass: new () => T): Promise<Repository<T>> {
     const tenantId = this.tenantContext.getCurrentTenant();
     const dataSource = await this.dataSourceFactory.getDataSource(tenantId);
-    
+
     return dataSource.getRepository(entityClass);
   }
 
   async transaction<T>(work: (repository: Repository<any>) => Promise<T>): Promise<T> {
     const tenantId = this.tenantContext.getCurrentTenant();
     const dataSource = await this.dataSourceFactory.getDataSource(tenantId);
-    
+
     return dataSource.transaction(work);
   }
 }
@@ -509,21 +457,21 @@ export class TenantAwareDataSource implements DataSource {
 export class TenantIdentificationMiddleware implements NestMiddleware {
   constructor(
     private readonly tenantRepository: TenantRepository,
-    private readonly tenantContext: TenantContext
+    private readonly tenantContext: TenantContext,
   ) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
     try {
       const tenantIdentifier = this.extractTenantIdentifier(req);
       const tenant = await this.tenantRepository.findByIdentifier(tenantIdentifier);
-      
+
       if (!tenant || !tenant.isActive()) {
-        throw new TenantNotFoundError('租户不存在或不可用');
+        throw new TenantNotFoundError("租户不存在或不可用");
       }
 
       // 设置租户上下文
       this.tenantContext.setCurrentTenant(tenant.id);
-      
+
       next();
     } catch (error) {
       next(error);
@@ -533,14 +481,14 @@ export class TenantIdentificationMiddleware implements NestMiddleware {
   private extractTenantIdentifier(req: Request): string {
     // 1. 从子域名识别 (tenant1.app.com)
     const hostname = req.hostname;
-    const subdomain = hostname.split('.')[0];
-    
-    if (subdomain && subdomain !== 'www' && subdomain !== 'app') {
+    const subdomain = hostname.split(".")[0];
+
+    if (subdomain && subdomain !== "www" && subdomain !== "app") {
       return subdomain;
     }
 
     // 2. 从请求头识别
-    const headerTenant = req.headers['x-tenant-id'];
+    const headerTenant = req.headers["x-tenant-id"];
     if (headerTenant) {
       return headerTenant as string;
     }
@@ -548,14 +496,14 @@ export class TenantIdentificationMiddleware implements NestMiddleware {
     // 3. 从JWT令牌识别（在认证后）
     const authHeader = req.headers.authorization;
     if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
+      const token = authHeader.replace("Bearer ", "");
       const payload = this.decodeToken(token);
       if (payload?.tenantId) {
         return payload.tenantId;
       }
     }
 
-    throw new TenantNotIdentifiedError('无法识别租户');
+    throw new TenantNotIdentifiedError("无法识别租户");
   }
 
   private decodeToken(token: string): any {
@@ -575,34 +523,29 @@ export class TenantIdentificationMiddleware implements NestMiddleware {
 export class MultiTenantAuthGuard implements CanActivate {
   constructor(
     private readonly commandBus: CommandBus,
-    private readonly tenantContext: TenantContext
+    private readonly tenantContext: TenantContext,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
-    
+
     if (!token) {
-      throw new UnauthorizedException('未提供访问令牌');
+      throw new UnauthorizedException("未提供访问令牌");
     }
 
     try {
       // 验证令牌并获取用户和租户信息
       const { user, tenant } = await this.commandBus.execute(new ValidateMultiTenantTokenCommand(token));
-      
+
       // 获取租户用户关联信息
       const tenantUser = await this.tenantUserRepository.findByUserAndTenant(user.id, tenant.id);
 
       // 构建多租户安全上下文
-      const securityContext = MultiTenantSecurityContext.fromUserAndTenant(
-        user,
-        tenant,
-        tenantUser,
-        {
-          ipAddress: request.ip,
-          userAgent: request.headers['user-agent']
-        }
-      );
+      const securityContext = MultiTenantSecurityContext.fromUserAndTenant(user, tenant, tenantUser, {
+        ipAddress: request.ip,
+        userAgent: request.headers["user-agent"],
+      });
 
       // 设置请求上下文
       request.user = user;
@@ -613,9 +556,8 @@ export class MultiTenantAuthGuard implements CanActivate {
       this.tenantContext.setCurrentTenant(tenant.id);
 
       return true;
-
     } catch (error) {
-      throw new UnauthorizedException('多租户认证失败');
+      throw new UnauthorizedException("多租户认证失败");
     }
   }
 }
@@ -628,14 +570,11 @@ export class MultiTenantAuthGuard implements CanActivate {
 export class TenantPermissionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly commandBus: CommandBus
+    private readonly commandBus: CommandBus,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermissions = this.reflector.get<string[]>(
-      'tenantPermissions',
-      context.getHandler()
-    );
+    const requiredPermissions = this.reflector.get<string[]>("tenantPermissions", context.getHandler());
 
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
@@ -645,7 +584,7 @@ export class TenantPermissionGuard implements CanActivate {
     const securityContext = request.securityContext as MultiTenantSecurityContext;
 
     if (!securityContext) {
-      throw new UnauthorizedException('安全上下文未设置');
+      throw new UnauthorizedException("安全上下文未设置");
     }
 
     // 租户所有者拥有所有权限
@@ -656,7 +595,7 @@ export class TenantPermissionGuard implements CanActivate {
     // 检查每个所需租户权限
     for (const permission of requiredPermissions) {
       const hasPermission = securityContext.hasTenantPermission(permission);
-      
+
       if (!hasPermission) {
         throw new ForbiddenException(`缺少租户权限: ${permission}`);
       }
@@ -670,50 +609,43 @@ export class TenantPermissionGuard implements CanActivate {
 ### 5.4 控制器使用示例
 
 ```typescript
-@Controller('api/:tenantId')
+@Controller("api/:tenantId")
 @UseGuards(MultiTenantAuthGuard)
 export class TenantAwareController {
-  @Get('profile')
+  @Get("profile")
   @UseGuards(TenantPermissionGuard)
-  @SetMetadata('tenantPermissions', ['profile:view'])
-  async getProfile(
-    @SecurityContext() context: MultiTenantSecurityContext
-  ): Promise<ApiResponse<ProfileResponseDto>> {
+  @SetMetadata("tenantPermissions", ["profile:view"])
+  async getProfile(@SecurityContext() context: MultiTenantSecurityContext): Promise<ApiResponse<ProfileResponseDto>> {
     // 自动使用当前租户上下文
     const query = new GetUserProfileQuery(context.userId, context.getCurrentTenantId());
     const profile = await this.queryBus.execute(query);
-    
+
     return ApiResponse.success(profile);
   }
 
-  @Post('orders')
+  @Post("orders")
   @UseGuards(TenantPermissionGuard)
-  @SetMetadata('tenantPermissions', ['order:create'])
-  async createOrder(
-    @SecurityContext() context: MultiTenantSecurityContext,
-    @Body() createOrderDto: CreateOrderRequestDto
-  ): Promise<ApiResponse<OrderResponseDto>> {
+  @SetMetadata("tenantPermissions", ["order:create"])
+  async createOrder(@SecurityContext() context: MultiTenantSecurityContext, @Body() createOrderDto: CreateOrderRequestDto): Promise<ApiResponse<OrderResponseDto>> {
     const command = new CreateOrderCommand(createOrderDto, context);
     const result = await this.commandBus.execute(command);
-    
+
     return ApiResponse.success(result);
   }
 }
 
 // 系统级管理接口（超级管理员）
-@Controller('system')
+@Controller("system")
 @UseGuards(MultiTenantAuthGuard)
 export class SystemAdminController {
-  @Get('tenants')
+  @Get("tenants")
   @UseGuards(GlobalPermissionGuard)
-  @SetMetadata('globalPermissions', ['system:tenant:view'])
-  async getAllTenants(
-    @SecurityContext() context: MultiTenantSecurityContext
-  ): Promise<ApiResponse<TenantListResponseDto>> {
+  @SetMetadata("globalPermissions", ["system:tenant:view"])
+  async getAllTenants(@SecurityContext() context: MultiTenantSecurityContext): Promise<ApiResponse<TenantListResponseDto>> {
     // 超级管理员可以查看所有租户
     const query = new GetAllTenantsQuery();
     const tenants = await this.queryBus.execute(query);
-    
+
     return ApiResponse.success(tenants);
   }
 }
@@ -733,14 +665,10 @@ export class TenantConfigService {
     return tenant.config;
   }
 
-  async updateTenantConfig(
-    tenantId: TenantId, 
-    updates: Partial<TenantConfig>,
-    updatedBy: UserId
-  ): Promise<void> {
+  async updateTenantConfig(tenantId: TenantId, updates: Partial<TenantConfig>, updatedBy: UserId): Promise<void> {
     const tenant = await this.tenantRepository.findById(tenantId);
     tenant.updateConfig(updates);
-    
+
     await this.tenantRepository.save(tenant);
   }
 }
@@ -759,4 +687,5 @@ export class TenantConfigService {
 这种设计确保了租户数据的完全隔离，同时提供了灵活的管理和权限控制能力。
 
 ---
-*文档版本: 2.0 | 最后更新: 2024-11-XX | 特性: 多租户支持*
+
+_文档版本: 2.0 | 最后更新: 2024-11-XX | 特性: 多租户支持_

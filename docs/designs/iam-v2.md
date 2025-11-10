@@ -3,7 +3,7 @@
 ## 1. 背景与目标
 
 - 构建面向多租户 SaaS 平台的统一身份认证与权限管理中心。
-- 与最新宪章、《docs/guides/*.md》多租户规范完全对齐，确保租户 → 组织 → 部门三级隔离可落地。
+- 与最新宪章、《docs/guides/\*.md》多租户规范完全对齐，确保租户 → 组织 → 部门三级隔离可落地。
 - 输出可复用的认证协议适配、权限评估、审计追踪与上下文管理能力，为业务模块提供统一接口。
 
 ## 2. 整体架构
@@ -90,20 +90,21 @@ saas-platform/
     ├── hr/                     # HR 业务模块
     └── crm/                    # CRM 业务模块
 ```
+
 > 说明：`core` 目录聚合 IAM 核心领域；`libs` 提供可被其它业务复用的基础能力；`docs` 保存规范与设计文档。
 
 ## 3. 子域模块划分
 
-| 子域 | 代码位置示例 | 职责简介 | 关键输出/示例 |
-| --- | --- | --- | --- |
-| Tenant | `core/domain/tenant` | 租户生命周期、订阅、状态管理、租户配置 | `TenantAggregate`、`TenantProvisioningSaga`（即将实现） |
-| Organization | `core/domain/organization` | 组织、部门、成员关系，多层级结构维护 | 部门树构建、`GetOrdersQueryHandler` 组织级过滤示例 |
-| Auth | `core/domain/auth` | 账户、凭证、会话管理，认证协议适配 | `UserAccountAggregate.register`/`deactivate`（§5.1） |
-| Authorization | `core/domain/authorization` | 角色、策略、权限事件（CASL 集成） | `RegisterUserCommandHandler` 权限校验（§5.2）、CASL 设计文档 |
-| Shared Kernel | `core/domain/shared` | 通用值对象、异常、时间模型、ID 工具 | `TenantId`/`OrganizationId`/`DepartmentId` 值对象、`UuidIdentity` 模板 |
-| Application | `core/application` | CQRS 命令/查询处理器、Saga、事件桥接 | `MultiTenantCommandHandler` 示例（§5.2）、`docs/guides/application-layer-guide.md` |
-| Interfaces | `core/interfaces` | REST/GraphQL/CLI 入口、装配器、守卫 | `MultiTenantLoggingInterceptor`、`TenantPermissionGuard`（参考接口层指南） |
-| Infrastructure | `infrastructure/` | MikroORM 实体仓储、CLS、Event Store、日志、消息等 | `BaseTenantRepository`、`TenantAwareSubscriber`、`MultiTenantEventStore` |
+| 子域           | 代码位置示例                | 职责简介                                          | 关键输出/示例                                                                      |
+| -------------- | --------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Tenant         | `core/domain/tenant`        | 租户生命周期、订阅、状态管理、租户配置            | `TenantAggregate`、`TenantProvisioningSaga`（即将实现）                            |
+| Organization   | `core/domain/organization`  | 组织、部门、成员关系，多层级结构维护              | 部门树构建、`GetOrdersQueryHandler` 组织级过滤示例                                 |
+| Auth           | `core/domain/auth`          | 账户、凭证、会话管理，认证协议适配                | `UserAccountAggregate.register`/`deactivate`（§5.1）                               |
+| Authorization  | `core/domain/authorization` | 角色、策略、权限事件（CASL 集成）                 | `RegisterUserCommandHandler` 权限校验（§5.2）、CASL 设计文档                       |
+| Shared Kernel  | `core/domain/shared`        | 通用值对象、异常、时间模型、ID 工具               | `TenantId`/`OrganizationId`/`DepartmentId` 值对象、`UuidIdentity` 模板             |
+| Application    | `core/application`          | CQRS 命令/查询处理器、Saga、事件桥接              | `MultiTenantCommandHandler` 示例（§5.2）、`docs/guides/application-layer-guide.md` |
+| Interfaces     | `core/interfaces`           | REST/GraphQL/CLI 入口、装配器、守卫               | `MultiTenantLoggingInterceptor`、`TenantPermissionGuard`（参考接口层指南）         |
+| Infrastructure | `infrastructure/`           | MikroORM 实体仓储、CLS、Event Store、日志、消息等 | `BaseTenantRepository`、`TenantAwareSubscriber`、`MultiTenantEventStore`           |
 
 ## 4. 核心设计原则
 
@@ -130,8 +131,9 @@ saas-platform/
 ## 5. 关键示例
 
 ### 5.1 聚合示例：UserAccountAggregate
+
 ```typescript
-import { DateTime } from 'luxon';
+import { DateTime } from "luxon";
 
 export class UserAccountAggregate extends MultiTenantAggregateRoot {
   private constructor(
@@ -140,19 +142,13 @@ export class UserAccountAggregate extends MultiTenantAggregateRoot {
     private _email: Email,
     private _hashedPassword: string | null,
     private _phone: PhoneNumber | null,
-    private _status: UserStatus = UserStatus.Active
+    private _status: UserStatus = UserStatus.Active,
   ) {
     super(tenantId);
   }
 
   static register(command: RegisterUserCommand): UserAccountAggregate {
-    const aggregate = new UserAccountAggregate(
-      UserId.create(),
-      TenantId.create(command.securityContext.tenantId),
-      Email.create(command.email),
-      PasswordHasher.hash(command.password),
-      command.phone ? PhoneNumber.create(command.phone) : null
-    );
+    const aggregate = new UserAccountAggregate(UserId.create(), TenantId.create(command.securityContext.tenantId), Email.create(command.email), PasswordHasher.hash(command.password), command.phone ? PhoneNumber.create(command.phone) : null);
 
     aggregate.touch();
     aggregate.addDomainEvent(new UserRegisteredEvent(aggregate._id, aggregate.tenantId, DateTime.now()));
@@ -171,6 +167,7 @@ export class UserAccountAggregate extends MultiTenantAggregateRoot {
 ```
 
 ### 5.2 命令处理器示例：RegisterUserCommandHandler
+
 ```typescript
 @CommandHandler(RegisterUserCommand)
 export class RegisterUserCommandHandler extends MultiTenantCommandHandler<RegisterUserCommand> {
@@ -181,7 +178,7 @@ export class RegisterUserCommandHandler extends MultiTenantCommandHandler<Regist
     auditService: AuditService,
     eventBus: EventBus,
     private readonly userRepository: UserAccountRepository,
-    private readonly commandValidator: CommandValidator
+    private readonly commandValidator: CommandValidator,
   ) {
     super(abilityService, tenantRepository, eventStore, auditService, eventBus);
   }
@@ -189,12 +186,12 @@ export class RegisterUserCommandHandler extends MultiTenantCommandHandler<Regist
   async execute(command: RegisterUserCommand): Promise<void> {
     await this.commandValidator.validate(command);
     await this.validateTenantStatus(command);
-    await this.validateCommandPermission(command, 'create', { __typename: 'UserAccount' });
+    await this.validateCommandPermission(command, "create", { __typename: "UserAccount" });
 
     const tenantId = TenantId.create(command.securityContext.tenantId);
     const email = Email.create(command.email);
     if (await this.userRepository.existsByEmail(tenantId, email)) {
-      throw new BusinessRuleViolation('邮箱已被占用');
+      throw new BusinessRuleViolation("邮箱已被占用");
     }
 
     const aggregate = UserAccountAggregate.register(command);
@@ -210,6 +207,7 @@ export class RegisterUserCommandHandler extends MultiTenantCommandHandler<Regist
 ```
 
 ### 5.3 事件驱动与能力缓存
+
 - 权限聚合 `UserAuthorization` 采用事件溯源，命令触发的 `RoleAssignedEvent`、`PermissionGrantedEvent` 等写入 Event Store（见《CASL 多租户设计规范》§2）。
 - 事件处理器 `RoleAssignedEventHandler` 会：
   1. 清除 `CaslAbilityService` 中用户的能力缓存；

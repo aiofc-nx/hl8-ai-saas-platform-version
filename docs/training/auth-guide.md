@@ -48,7 +48,7 @@ export class User extends AggregateRoot {
     private roles: UserRole[] = [],
     private permissions: Permission[] = [],
     private lastLoginAt?: DateTime,
-    private loginAttempts: number = 0
+    private loginAttempts: number = 0,
   ) {
     super();
   }
@@ -56,14 +56,14 @@ export class User extends AggregateRoot {
   // 核心业务方法
   public static async create(registration: UserRegistration): Promise<User> {
     const passwordHash = await PasswordHash.hash(registration.password);
-    
+
     const user = new User(
       UserId.create(),
       new Email(registration.email),
       passwordHash,
       UserStatus.ACTIVE,
       UserProfile.create(registration.profile),
-      [UserRole.MEMBER] // 默认角色
+      [UserRole.MEMBER], // 默认角色
     );
 
     user.addDomainEvent(new UserRegisteredEvent(user.id, user.email));
@@ -73,11 +73,11 @@ export class User extends AggregateRoot {
   // 认证相关方法
   public async authenticate(plainPassword: string): Promise<boolean> {
     if (this.status !== UserStatus.ACTIVE) {
-      throw new UserInactiveError('用户账户未激活');
+      throw new UserInactiveError("用户账户未激活");
     }
 
     const isValid = await this.passwordHash.verify(plainPassword);
-    
+
     if (isValid) {
       this.recordSuccessfulLogin();
     } else {
@@ -88,8 +88,8 @@ export class User extends AggregateRoot {
   }
 
   public async changePassword(oldPassword: string, newPassword: string): Promise<void> {
-    if (!await this.authenticate(oldPassword)) {
-      throw new InvalidCredentialsError('原密码不正确');
+    if (!(await this.authenticate(oldPassword))) {
+      throw new InvalidCredentialsError("原密码不正确");
     }
 
     this.passwordHash = await PasswordHash.hash(newPassword);
@@ -98,8 +98,7 @@ export class User extends AggregateRoot {
 
   // 授权相关方法
   public hasPermission(permission: Permission): boolean {
-    return this.permissions.includes(permission) || 
-           this.roles.some(role => role.hasPermission(permission));
+    return this.permissions.includes(permission) || this.roles.some((role) => role.hasPermission(permission));
   }
 
   public hasRole(role: UserRole): boolean {
@@ -153,7 +152,7 @@ export class UserRole extends ValueObject {
     public readonly name: string,
     public readonly permissions: Permission[],
     public readonly level: number,
-    public readonly isSystem: boolean = false
+    public readonly isSystem: boolean = false,
   ) {
     super();
     this.validate();
@@ -169,28 +168,16 @@ export class UserRole extends ValueObject {
 
   private validate(): void {
     if (this.level < 0) {
-      throw new InvalidRoleError('角色等级不能为负数');
+      throw new InvalidRoleError("角色等级不能为负数");
     }
   }
 
   // 预定义系统角色
-  static readonly SUPER_ADMIN = new UserRole('SUPER_ADMIN', [
-    Permission.USER_MANAGE,
-    Permission.ROLE_MANAGE,
-    Permission.SYSTEM_MANAGE
-  ], 100, true);
+  static readonly SUPER_ADMIN = new UserRole("SUPER_ADMIN", [Permission.USER_MANAGE, Permission.ROLE_MANAGE, Permission.SYSTEM_MANAGE], 100, true);
 
-  static readonly ADMIN = new UserRole('ADMIN', [
-    Permission.USER_VIEW,
-    Permission.ORDER_MANAGE,
-    Permission.PRODUCT_MANAGE
-  ], 90);
+  static readonly ADMIN = new UserRole("ADMIN", [Permission.USER_VIEW, Permission.ORDER_MANAGE, Permission.PRODUCT_MANAGE], 90);
 
-  static readonly MEMBER = new UserRole('MEMBER', [
-    Permission.ORDER_CREATE,
-    Permission.ORDER_VIEW_OWN,
-    Permission.PROFILE_MANAGE
-  ], 10);
+  static readonly MEMBER = new UserRole("MEMBER", [Permission.ORDER_CREATE, Permission.ORDER_VIEW_OWN, Permission.PROFILE_MANAGE], 10);
 }
 
 // 值对象 - 权限
@@ -198,7 +185,7 @@ export class Permission extends ValueObject {
   constructor(
     public readonly resource: string,
     public readonly action: string,
-    public readonly scope: PermissionScope = PermissionScope.GLOBAL
+    public readonly scope: PermissionScope = PermissionScope.GLOBAL,
   ) {
     super();
   }
@@ -208,16 +195,16 @@ export class Permission extends ValueObject {
   }
 
   public static fromString(permissionString: string): Permission {
-    const [resource, action] = permissionString.split(':');
+    const [resource, action] = permissionString.split(":");
     return new Permission(resource, action);
   }
 
   // 预定义权限
-  static readonly USER_MANAGE = new Permission('user', 'manage');
-  static readonly USER_VIEW = new Permission('user', 'view');
-  static readonly ORDER_CREATE = new Permission('order', 'create');
-  static readonly ORDER_VIEW_OWN = new Permission('order', 'view_own');
-  static readonly ORDER_MANAGE = new Permission('order', 'manage');
+  static readonly USER_MANAGE = new Permission("user", "manage");
+  static readonly USER_VIEW = new Permission("user", "view");
+  static readonly ORDER_CREATE = new Permission("order", "create");
+  static readonly ORDER_VIEW_OWN = new Permission("order", "view_own");
+  static readonly ORDER_MANAGE = new Permission("order", "manage");
 }
 ```
 
@@ -250,18 +237,18 @@ export class DefaultAuthenticationService implements AuthenticationDomainService
   constructor(
     private readonly userRepository: UserRepository,
     private readonly passwordHasher: PasswordHasher,
-    private readonly tokenService: TokenService
+    private readonly tokenService: TokenService,
   ) {}
 
   async authenticate(credentials: LoginCredentials): Promise<User> {
     const user = await this.userRepository.findByEmail(credentials.email);
     if (!user) {
-      throw new InvalidCredentialsError('用户名或密码错误');
+      throw new InvalidCredentialsError("用户名或密码错误");
     }
 
     const isValid = await user.authenticate(credentials.password);
     if (!isValid) {
-      throw new InvalidCredentialsError('用户名或密码错误');
+      throw new InvalidCredentialsError("用户名或密码错误");
     }
 
     return user;
@@ -275,9 +262,9 @@ export class DefaultAuthenticationService implements AuthenticationDomainService
   async refreshToken(refreshToken: string): Promise<TokenPair> {
     const payload = await this.tokenService.verifyRefreshToken(refreshToken);
     const user = await this.userRepository.findById(UserId.create(payload.sub));
-    
+
     if (!user || user.status !== UserStatus.ACTIVE) {
-      throw new InvalidTokenError('刷新令牌无效');
+      throw new InvalidTokenError("刷新令牌无效");
     }
 
     return await this.tokenService.generateTokenPair(user);
@@ -297,25 +284,21 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
     private readonly authService: AuthenticationDomainService,
     private readonly tokenService: TokenService,
     private readonly eventPublisher: EventPublisher,
-    private readonly loginAuditService: LoginAuditService
+    private readonly loginAuditService: LoginAuditService,
   ) {}
 
   async execute(command: LoginCommand): Promise<LoginResult> {
     // 调用领域服务认证
     const user = await this.authService.authenticate({
       email: command.email,
-      password: command.password
+      password: command.password,
     });
 
     // 生成令牌
     const tokens = await this.tokenService.generateTokenPair(user);
-    
+
     // 记录审计日志
-    await this.loginAuditService.recordSuccess(
-      user.id, 
-      command.ipAddress, 
-      command.userAgent
-    );
+    await this.loginAuditService.recordSuccess(user.id, command.ipAddress, command.userAgent);
 
     // 发布领域事件
     user.clearEvents(); // 认证过程中可能产生的事件
@@ -330,7 +313,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
 export class CheckPermissionHandler implements ICommandHandler<CheckPermissionCommand> {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly authService: AuthorizationDomainService
+    private readonly authService: AuthorizationDomainService,
   ) {}
 
   async execute(command: CheckPermissionCommand): Promise<boolean> {
@@ -340,12 +323,8 @@ export class CheckPermissionHandler implements ICommandHandler<CheckPermissionCo
     }
 
     const permission = Permission.fromString(command.permissionString);
-    
-    return await this.authService.checkPermission(
-      user,
-      permission,
-      command.resource
-    );
+
+    return await this.authService.checkPermission(user, permission, command.resource);
   }
 }
 
@@ -354,14 +333,14 @@ export class CheckPermissionHandler implements ICommandHandler<CheckPermissionCo
 export class ValidateTokenHandler implements ICommandHandler<ValidateTokenCommand> {
   constructor(
     private readonly authService: AuthenticationDomainService,
-    private readonly userRepository: UserRepository
+    private readonly userRepository: UserRepository,
   ) {}
 
   async execute(command: ValidateTokenCommand): Promise<User> {
     const user = await this.authService.validateToken(command.token);
-    
+
     if (!user || user.status !== UserStatus.ACTIVE) {
-      throw new InvalidTokenError('令牌无效或用户状态异常');
+      throw new InvalidTokenError("令牌无效或用户状态异常");
     }
 
     return user;
@@ -382,19 +361,19 @@ export class SecurityContext {
     public readonly sessionId: string,
     public readonly ipAddress: string,
     public readonly userAgent: string,
-    public readonly issuedAt: Date
+    public readonly issuedAt: Date,
   ) {}
 
   static fromUser(user: User, additionalInfo: Partial<SecurityContext> = {}): SecurityContext {
     return new SecurityContext(
       user.id.value,
       user.email.value,
-      user.roles.map(role => role.name),
-      user.permissions.map(p => p.toString()),
+      user.roles.map((role) => role.name),
+      user.permissions.map((p) => p.toString()),
       additionalInfo.sessionId || ulid(),
-      additionalInfo.ipAddress || '',
-      additionalInfo.userAgent || '',
-      additionalInfo.issuedAt || new Date()
+      additionalInfo.ipAddress || "",
+      additionalInfo.userAgent || "",
+      additionalInfo.issuedAt || new Date(),
     );
   }
 
@@ -417,24 +396,22 @@ export class SecurityContext {
       sessionId: this.sessionId,
       ipAddress: this.ipAddress,
       userAgent: this.userAgent,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 }
 
 // 安全上下文装饰器
-export const SecurityContext = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): SecurityContext => {
-    const request = ctx.switchToHttp().getRequest();
-    const context = request.securityContext;
-    
-    if (!context) {
-      throw new SecurityContextMissingError('安全上下文未设置');
-    }
-    
-    return context;
+export const SecurityContext = createParamDecorator((data: unknown, ctx: ExecutionContext): SecurityContext => {
+  const request = ctx.switchToHttp().getRequest();
+  const context = request.securityContext;
+
+  if (!context) {
+    throw new SecurityContextMissingError("安全上下文未设置");
   }
-);
+
+  return context;
+});
 ```
 
 ## 🛡 基础设施层设计规范
@@ -447,37 +424,34 @@ export class JwtTokenService implements TokenService {
   constructor(
     private readonly configService: ConfigService,
     private readonly userRepository: UserRepository,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   async generateTokenPair(user: User): Promise<TokenPair> {
     const payload = this.buildTokenPayload(user);
-    
-    const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken(payload),
-      this.generateRefreshToken(payload)
-    ]);
+
+    const [accessToken, refreshToken] = await Promise.all([this.generateAccessToken(payload), this.generateRefreshToken(payload)]);
 
     return { accessToken, refreshToken };
   }
 
   async verifyAccessToken(token: string): Promise<TokenPayload> {
     try {
-      const payload = jwt.verify(token, this.configService.get('JWT_ACCESS_SECRET')) as any;
+      const payload = jwt.verify(token, this.configService.get("JWT_ACCESS_SECRET")) as any;
       return this.validateTokenPayload(payload);
     } catch (error) {
       this.logger.warn(`Access token verification failed: ${error.message}`);
-      throw new InvalidTokenError('访问令牌无效');
+      throw new InvalidTokenError("访问令牌无效");
     }
   }
 
   async verifyRefreshToken(token: string): Promise<TokenPayload> {
     try {
-      const payload = jwt.verify(token, this.configService.get('JWT_REFRESH_SECRET')) as any;
+      const payload = jwt.verify(token, this.configService.get("JWT_REFRESH_SECRET")) as any;
       return this.validateTokenPayload(payload);
     } catch (error) {
       this.logger.warn(`Refresh token verification failed: ${error.message}`);
-      throw new InvalidTokenError('刷新令牌无效');
+      throw new InvalidTokenError("刷新令牌无效");
     }
   }
 
@@ -485,38 +459,30 @@ export class JwtTokenService implements TokenService {
     return {
       sub: user.id.value,
       email: user.email.value,
-      roles: user.roles.map(role => role.name),
-      permissions: user.permissions.map(p => p.toString()),
-      iss: 'order-system',
-      iat: Math.floor(Date.now() / 1000)
+      roles: user.roles.map((role) => role.name),
+      permissions: user.permissions.map((p) => p.toString()),
+      iss: "order-system",
+      iat: Math.floor(Date.now() / 1000),
     };
   }
 
   private async generateAccessToken(payload: any): Promise<string> {
-    return jwt.sign(
-      { ...payload, type: 'access' },
-      this.configService.get('JWT_ACCESS_SECRET'),
-      {
-        expiresIn: this.configService.get('JWT_ACCESS_EXPIRES_IN', '1h'),
-        jwtid: ulid() // 唯一的JWT ID
-      }
-    );
+    return jwt.sign({ ...payload, type: "access" }, this.configService.get("JWT_ACCESS_SECRET"), {
+      expiresIn: this.configService.get("JWT_ACCESS_EXPIRES_IN", "1h"),
+      jwtid: ulid(), // 唯一的JWT ID
+    });
   }
 
   private async generateRefreshToken(payload: any): Promise<string> {
-    return jwt.sign(
-      { ...payload, type: 'refresh' },
-      this.configService.get('JWT_REFRESH_SECRET'),
-      {
-        expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', '7d'),
-        jwtid: ulid()
-      }
-    );
+    return jwt.sign({ ...payload, type: "refresh" }, this.configService.get("JWT_REFRESH_SECRET"), {
+      expiresIn: this.configService.get("JWT_REFRESH_EXPIRES_IN", "7d"),
+      jwtid: ulid(),
+    });
   }
 
   private validateTokenPayload(payload: any): TokenPayload {
     if (!payload.sub || !payload.email) {
-      throw new InvalidTokenError('令牌负载不完整');
+      throw new InvalidTokenError("令牌负载不完整");
     }
 
     return {
@@ -524,7 +490,7 @@ export class JwtTokenService implements TokenService {
       email: payload.email,
       roles: payload.roles || [],
       permissions: payload.permissions || [],
-      type: payload.type
+      type: payload.type,
     };
   }
 }
@@ -558,31 +524,31 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly commandBus: CommandBus,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const isPublic = this.reflector.get<boolean>('isPublic', context.getHandler());
+    const isPublic = this.reflector.get<boolean>("isPublic", context.getHandler());
     if (isPublic) {
       return true;
     }
 
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
-    
+
     if (!token) {
-      throw new UnauthorizedException('未提供访问令牌');
+      throw new UnauthorizedException("未提供访问令牌");
     }
 
     try {
       // 使用应用层用例验证令牌
       const user = await this.commandBus.execute(new ValidateTokenCommand(token));
-      
+
       // 构建安全上下文
       const securityContext = SecurityContext.fromUser(user, {
         ipAddress: request.ip,
-        userAgent: request.headers['user-agent'],
-        sessionId: this.extractSessionId(token)
+        userAgent: request.headers["user-agent"],
+        sessionId: this.extractSessionId(token),
       });
 
       // 设置请求上下文
@@ -591,10 +557,9 @@ export class JwtAuthGuard implements CanActivate {
 
       this.logger.debug(`User ${user.id.value} authenticated successfully`);
       return true;
-
     } catch (error) {
       this.logger.warn(`Authentication failed: ${error.message}`);
-      throw new UnauthorizedException('认证失败');
+      throw new UnauthorizedException("认证失败");
     }
   }
 
@@ -604,8 +569,8 @@ export class JwtAuthGuard implements CanActivate {
       return null;
     }
 
-    const [type, token] = authHeader.split(' ');
-    return type === 'Bearer' ? token : null;
+    const [type, token] = authHeader.split(" ");
+    return type === "Bearer" ? token : null;
   }
 
   private extractSessionId(token: string): string {
@@ -626,14 +591,11 @@ export class JwtAuthGuard implements CanActivate {
 export class PermissionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly commandBus: CommandBus
+    private readonly commandBus: CommandBus,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermissions = this.reflector.get<string[]>(
-      'permissions',
-      context.getHandler()
-    );
+    const requiredPermissions = this.reflector.get<string[]>("permissions", context.getHandler());
 
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
@@ -643,7 +605,7 @@ export class PermissionGuard implements CanActivate {
     const securityContext = request.securityContext;
 
     if (!securityContext) {
-      throw new UnauthorizedException('安全上下文未设置');
+      throw new UnauthorizedException("安全上下文未设置");
     }
 
     // 超级管理员拥有所有权限
@@ -653,9 +615,7 @@ export class PermissionGuard implements CanActivate {
 
     // 检查每个所需权限
     for (const permission of requiredPermissions) {
-      const hasPermission = await this.commandBus.execute(
-        new CheckPermissionCommand(securityContext, permission)
-      );
+      const hasPermission = await this.commandBus.execute(new CheckPermissionCommand(securityContext, permission));
 
       if (!hasPermission) {
         throw new ForbiddenException(`缺少权限: ${permission}`);
@@ -671,12 +631,12 @@ export class PermissionGuard implements CanActivate {
 export class ResourceOwnershipGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly commandBus: CommandBus
+    private readonly commandBus: CommandBus,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const resourceType = this.reflector.get<string>('resourceType', context.getHandler());
-    const idParam = this.reflector.get<string>('idParam', context.getHandler());
+    const resourceType = this.reflector.get<string>("resourceType", context.getHandler());
+    const idParam = this.reflector.get<string>("idParam", context.getHandler());
 
     const request = context.switchToHttp().getRequest();
     const securityContext = request.securityContext;
@@ -691,16 +651,10 @@ export class ResourceOwnershipGuard implements CanActivate {
       return true;
     }
 
-    const isOwner = await this.commandBus.execute(
-      new CheckResourceOwnershipCommand(
-        securityContext.userId,
-        resourceType,
-        resourceId
-      )
-    );
+    const isOwner = await this.commandBus.execute(new CheckResourceOwnershipCommand(securityContext.userId, resourceType, resourceId));
 
     if (!isOwner) {
-      throw new ForbiddenException('无权访问该资源');
+      throw new ForbiddenException("无权访问该资源");
     }
 
     return true;
@@ -711,59 +665,49 @@ export class ResourceOwnershipGuard implements CanActivate {
 ### 5.3 控制器使用示例
 
 ```typescript
-@Controller('auth')
+@Controller("auth")
 export class AuthController {
   constructor(private readonly commandBus: CommandBus) {}
 
-  @Post('login')
+  @Post("login")
   @Public()
-  async login(
-    @Body() loginDto: LoginRequestDto,
-    @Ip() ipAddress: string,
-    @Headers('user-agent') userAgent: string
-  ): Promise<ApiResponse<LoginResponseDto>> {
+  async login(@Body() loginDto: LoginRequestDto, @Ip() ipAddress: string, @Headers("user-agent") userAgent: string): Promise<ApiResponse<LoginResponseDto>> {
     const command = new LoginCommand(loginDto.email, loginDto.password, ipAddress, userAgent);
     const result = await this.commandBus.execute(command);
-    
+
     return ApiResponse.success(this.toLoginResponseDto(result));
   }
 
-  @Post('refresh')
+  @Post("refresh")
   @Public()
   async refreshToken(@Body() refreshDto: RefreshTokenRequestDto): Promise<ApiResponse<TokenResponseDto>> {
     const command = new RefreshTokenCommand(refreshDto.refreshToken);
     const tokens = await this.commandBus.execute(command);
-    
+
     return ApiResponse.success(this.toTokenResponseDto(tokens));
   }
 }
 
-@Controller('orders')
+@Controller("orders")
 @UseGuards(JwtAuthGuard)
 export class OrderController {
   @Post()
   @UseGuards(PermissionGuard)
-  @Permissions('order:create')
-  async createOrder(
-    @SecurityContext() context: SecurityContext,
-    @Body() createOrderDto: CreateOrderRequestDto
-  ): Promise<ApiResponse<OrderResponseDto>> {
+  @Permissions("order:create")
+  async createOrder(@SecurityContext() context: SecurityContext, @Body() createOrderDto: CreateOrderRequestDto): Promise<ApiResponse<OrderResponseDto>> {
     const command = new PlaceOrderCommand(createOrderDto, context);
     const result = await this.commandBus.execute(command);
-    
+
     return ApiResponse.success(this.toOrderResponseDto(result));
   }
 
-  @Get(':id')
+  @Get(":id")
   @UseGuards(ResourceOwnershipGuard)
-  @SetMetadata('resourceType', 'order')
-  async getOrder(
-    @SecurityContext() context: SecurityContext,
-    @Param('id') orderId: string
-  ): Promise<ApiResponse<OrderResponseDto>> {
+  @SetMetadata("resourceType", "order")
+  async getOrder(@SecurityContext() context: SecurityContext, @Param("id") orderId: string): Promise<ApiResponse<OrderResponseDto>> {
     const query = new GetOrderQuery(orderId, context.userId);
     const order = await this.queryBus.execute(query);
-    
+
     return ApiResponse.success(this.toOrderResponseDto(order));
   }
 }
@@ -778,16 +722,10 @@ export class OrderController {
 export class SecurityAuditService {
   constructor(
     private readonly auditRepository: AuditRepository,
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
-  async recordAuthentication(
-    userId: string,
-    action: AuthAction,
-    success: boolean,
-    context: AuditContext,
-    details?: any
-  ): Promise<void> {
+  async recordAuthentication(userId: string, action: AuthAction, success: boolean, context: AuditContext, details?: any): Promise<void> {
     const auditLog = AuthenticationAudit.create({
       userId,
       action,
@@ -796,7 +734,7 @@ export class SecurityAuditService {
       userAgent: context.userAgent,
       sessionId: context.sessionId,
       timestamp: context.timestamp,
-      details
+      details,
     });
 
     await this.auditRepository.save(auditLog);
@@ -804,18 +742,12 @@ export class SecurityAuditService {
     if (!success) {
       this.logger.warn(`Authentication failure: ${action} for user ${userId}`, {
         ip: context.ipAddress,
-        details
+        details,
       });
     }
   }
 
-  async recordAuthorization(
-    userId: string,
-    resource: string,
-    action: string,
-    granted: boolean,
-    context: AuditContext
-  ): Promise<void> {
+  async recordAuthorization(userId: string, resource: string, action: string, granted: boolean, context: AuditContext): Promise<void> {
     const auditLog = AuthorizationAudit.create({
       userId,
       resource,
@@ -823,7 +755,7 @@ export class SecurityAuditService {
       granted,
       ipAddress: context.ipAddress,
       timestamp: context.timestamp,
-      sessionId: context.sessionId
+      sessionId: context.sessionId,
     });
 
     await this.auditRepository.save(auditLog);
@@ -845,32 +777,32 @@ export class SecurityConfig {
   // JWT 配置
   get jwtConfig(): JwtConfig {
     return {
-      accessSecret: this.getRequired('JWT_ACCESS_SECRET'),
-      refreshSecret: this.getRequired('JWT_REFRESH_SECRET'),
-      accessExpiresIn: this.get('JWT_ACCESS_EXPIRES_IN', '1h'),
-      refreshExpiresIn: this.get('JWT_REFRESH_EXPIRES_IN', '7d'),
-      issuer: this.get('JWT_ISSUER', 'order-system')
+      accessSecret: this.getRequired("JWT_ACCESS_SECRET"),
+      refreshSecret: this.getRequired("JWT_REFRESH_SECRET"),
+      accessExpiresIn: this.get("JWT_ACCESS_EXPIRES_IN", "1h"),
+      refreshExpiresIn: this.get("JWT_REFRESH_EXPIRES_IN", "7d"),
+      issuer: this.get("JWT_ISSUER", "order-system"),
     };
   }
 
   // 密码策略配置
   get passwordPolicy(): PasswordPolicy {
     return {
-      minLength: parseInt(this.get('PASSWORD_MIN_LENGTH', '8')),
-      requireUppercase: this.get('PASSWORD_REQUIRE_UPPERCASE', 'true') === 'true',
-      requireLowercase: this.get('PASSWORD_REQUIRE_LOWERCASE', 'true') === 'true',
-      requireNumbers: this.get('PASSWORD_REQUIRE_NUMBERS', 'true') === 'true',
-      requireSymbols: this.get('PASSWORD_REQUIRE_SYMBOLS', 'false') === 'true',
-      maxAgeDays: parseInt(this.get('PASSWORD_MAX_AGE_DAYS', '90'))
+      minLength: parseInt(this.get("PASSWORD_MIN_LENGTH", "8")),
+      requireUppercase: this.get("PASSWORD_REQUIRE_UPPERCASE", "true") === "true",
+      requireLowercase: this.get("PASSWORD_REQUIRE_LOWERCASE", "true") === "true",
+      requireNumbers: this.get("PASSWORD_REQUIRE_NUMBERS", "true") === "true",
+      requireSymbols: this.get("PASSWORD_REQUIRE_SYMBOLS", "false") === "true",
+      maxAgeDays: parseInt(this.get("PASSWORD_MAX_AGE_DAYS", "90")),
     };
   }
 
   // 登录安全配置
   get loginSecurity(): LoginSecurityConfig {
     return {
-      maxAttempts: parseInt(this.get('LOGIN_MAX_ATTEMPTS', '5')),
-      lockoutDuration: parseInt(this.get('LOGIN_LOCKOUT_DURATION', '900')), // 15分钟
-      requireEmailVerification: this.get('REQUIRE_EMAIL_VERIFICATION', 'true') === 'true'
+      maxAttempts: parseInt(this.get("LOGIN_MAX_ATTEMPTS", "5")),
+      lockoutDuration: parseInt(this.get("LOGIN_LOCKOUT_DURATION", "900")), // 15分钟
+      requireEmailVerification: this.get("REQUIRE_EMAIL_VERIFICATION", "true") === "true",
     };
   }
 }
@@ -890,4 +822,5 @@ export class SecurityConfig {
 通过这种全栈设计，我们构建了一个安全、可扩展、可维护的认证授权系统，为整个应用提供坚实的安全保障。
 
 ---
-*文档版本: 1.0 | 最后更新: 2024-11-XX | 适用项目: NestJS DDD 混合架构项目*
+
+_文档版本: 1.0 | 最后更新: 2024-11-XX | 适用项目: NestJS DDD 混合架构项目_
