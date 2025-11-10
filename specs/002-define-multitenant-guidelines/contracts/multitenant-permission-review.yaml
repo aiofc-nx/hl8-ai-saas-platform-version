@@ -1,0 +1,109 @@
+metadata:
+  name: 多租户与权限设计评审清单
+  version: "1.0.0"
+  applicable_projects:
+    - backend-domain-service
+    - scheduled-jobs
+    - event-consumer
+  required_roles:
+    - architecture-lead
+    - domain-owner
+    - security-reviewer
+
+sections:
+  - id: tenant-context
+    title: 租户上下文建立与传播
+    checks:
+      - id: tenant-source-defined
+        description: 已明确 HTTP/消息/任务入口的租户来源与兜底策略
+        evidence: 设计文档链接或配置类定义
+        pass_criteria:
+          - 引用 `TenantExecutionContext` 指南字段
+          - 缺失租户时触发标准异常并记录日志
+      - id: context-propagation
+        description: CLS/AsyncLocalStorage 配置与跨线程任务处理方案已说明
+        evidence: 代码片段或模块配置
+        pass_criteria:
+          - 使用 `TenantContextModule` / `TenantContextExecutor`
+          - 提供任务/定时器恢复上下文示例
+
+  - id: data-isolation
+    title: 数据隔离与持久化控制
+    checks:
+      - id: repository-usage
+        description: 所有仓储继承 `BaseTenantRepository`，列出特殊例外
+        evidence: 仓储目录列表
+        pass_criteria:
+          - 列出覆盖范围 ≥ 95%
+          - 特殊例外需说明原因与额外防护
+      - id: db-constraints
+        description: 数据库层已规划 `(tenant_id, business_key)` 唯一索引或分区
+        evidence: migration 草案或 schema 截图
+        pass_criteria:
+          - 给出索引/分区命名
+          - 标注回滚策略
+      - id: cache-namespace
+        description: 缓存命名空间与 TTL 策略遵循 `libs/infra/cache`
+        evidence: 缓存配置
+        pass_criteria:
+          - 覆盖热点 key 模式
+          - 指定命中监控指标
+
+  - id: authorization
+    title: 权限模型与审计
+    checks:
+      - id: role-registry
+        description: 角色-能力注册表结构符合 `RoleCapabilityRegistry` 指南
+        evidence: 配置清单或表结构
+        pass_criteria:
+          - 包含版本、变更记录、同步目标
+      - id: casl-policies
+        description: 控制器与 Handler 已列出 `@CheckPolicies` 应用示例
+        evidence: 代码示例或伪代码
+        pass_criteria:
+          - 涵盖 CRUD + 特殊操作
+          - 显式校验租户一致性
+      - id: audit-log
+        description: 越权、共享资源、租户停用相关日志字段完整
+        evidence: 日志字段定义或数据字典
+        pass_criteria:
+          - 记录 `tenantId`、`actorId`、`ability`、`result`
+          - 日志落地至集中化平台并设置告警阈值
+
+  - id: third-party
+    title: 第三方接入租户映射
+  - id: ddd-architecture
+    title: DDD + Clean Architecture + CQRS + ES 协同
+    checks:
+      - id: bounded-context-map
+        description: 提供界限上下文图、聚合根清单及跨上下文协作关系
+        evidence: 架构图或设计文档
+        pass_criteria:
+          - 明确每个聚合根的事务边界与租户隔离策略
+          - 标注跨上下文通信方式（事件、API）
+      - id: command-query-separation
+        description: 命令处理器与查询处理器职责分离，涵盖租户校验与权限判断步骤
+        evidence: 伪代码或流程图
+        pass_criteria:
+          - 在命令链路中调用 `TenantContextExecutor` 并触发 CASL 判断
+          - 读模型说明缓存/数据库隔离措施
+      - id: event-sourcing-alignment
+        description: 事件溯源流包含 `tenantId` 分区键，订阅方明确越权防护措施
+        evidence: 事件 schema 或 topic 规划
+        pass_criteria:
+          - 列出事件命名规范与版本策略
+          - 订阅处理链路说明租户上下文恢复与异常处理
+    checks:
+      - id: mapping-strategy
+        description: API Key → 租户映射策略及失效处理流程
+        evidence: 映射配置、运行手册
+        pass_criteria:
+          - 每条映射具备审批记录
+          - 失效时触发熔断与通知
+      - id: audit-trail
+        description: 映射日志保留周期与审计触发条件
+        evidence: 日志策略文档
+        pass_criteria:
+          - 保留 ≥ 180 天
+          - 至少每周抽样审计
+
