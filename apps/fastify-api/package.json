@@ -31,9 +31,11 @@
     "db:migration:list": "pnpm run build && mikro-orm migration:list --config ./mikro-orm.config.js"
   },
   "dependencies": {
+    "@casl/ability": "^6.5.0",
     "@hl8/async-storage": "workspace:*",
     "@hl8/bootstrap": "workspace:*",
     "@hl8/config": "workspace:*",
+    "@hl8/core": "workspace:*",
     "@hl8/logger": "workspace:*",
     "@hl8/mikro-orm-nestjs": "workspace:*",
     "@hl8/multi-tenancy": "workspace:*",
@@ -41,16 +43,25 @@
     "@mikro-orm/core": "^6.5.9",
     "@mikro-orm/knex": "^6.5.9",
     "@mikro-orm/migrations": "^6.5.9",
+    "@mikro-orm/mongodb": "^6.5.9",
     "@mikro-orm/postgresql": "^6.5.9",
+    "@mikro-orm/reflection": "^6.5.9",
     "@mikro-orm/seeder": "^6.5.9",
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/cqrs": "^11.0.1",
+    "@nestjs/platform-fastify": "^11.0.1",
     "@nestjs/swagger": "^11.2.1",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.2",
+    "ioredis": "^5.4.1",
+    "luxon": "^3.5.0",
+    "nestjs-cls": "^6.0.1",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@mikro-orm/cli": "^6.5.9",
