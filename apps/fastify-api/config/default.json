@@ -47,5 +47,34 @@
     "serverUrl": "http://localhost:3001",
     "stagingUrl": "https://staging-api.hl8.com",
     "productionUrl": "https://api.hl8.com"
+  },
+  "database": {
+    "host": "postgres",
+    "port": 5432,
+    "user": "aiofix",
+    "password": "aiofix",
+    "dbName": "hl8-platform",
+    "schema": "public",
+    "debug": false,
+    "registerRequestContext": true,
+    "autoLoadEntities": true,
+    "entities": {
+      "glob": "./dist/entities/**/*.js",
+      "tsGlob": "./src/entities/**/*.ts"
+    },
+    "migrations": {
+      "tableName": "mikro_orm_migrations",
+      "path": "./dist/database/migrations",
+      "pathTs": "./src/database/migrations",
+      "glob": "!(*.d).{js,ts}"
+    },
+    "seeder": {
+      "path": "./dist/database/seeders",
+      "pathTs": "./src/database/seeders",
+      "glob": "!(*.d).{js,ts}",
+      "defaultSeeder": "DatabaseSeeder",
+      "emit": "ts",
+      "fileNamePattern": "[name].seeder"
+    }
   }
 }

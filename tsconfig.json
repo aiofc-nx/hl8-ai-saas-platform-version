@@ -29,6 +29,7 @@
       "@hl8/config": ["libs/infra/config/src/index.ts"],
       "@hl8/cache": ["libs/infra/cache/src/index.ts"],
       "@hl8/bootstrap": ["libs/infra/bootstrap/src/index.ts"],
+      "@hl8/mikro-orm-nestjs": ["libs/infra/mikro-orm-nestjs/src/index.ts"],
       "@hl8/async-storage": ["libs/infra/async-storage/src/index.ts"],
       "@hl8/swagger": ["libs/infra/swagger/src/index.ts"]
     }
