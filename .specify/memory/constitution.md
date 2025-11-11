@@ -44,7 +44,7 @@ Follow-up TODOs: TODO(RESTORE_SPECKIT_ASSETS): speckit 模板及命令资产已�
 
 ### IV. 测试要求原则
 
-- 单元测试与被测文件同目录，命名 `{filename}.spec.ts`；集成与端到端测试集中放置在 `tests/integration/` 与 `tests/e2e/`。
+- 单元测试与被测文件同目录(旁放)，命名 `{filename}.spec.ts`；集成与端到端测试集中放置在 `tests/integration/` 与 `tests/e2e/`。
 - 采用分层测试策略：单元、集成、端到端各司其职，确保快速反馈与可维护性。
 - 核心业务逻辑测试覆盖率须达到 80% 以上，关键路径 90% 以上，所有公共 API 必须具备测试用例。
 

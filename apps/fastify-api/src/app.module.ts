@@ -14,6 +14,7 @@ import { AppController } from "./app.controller.js";
 import { AppConfig } from "./config/app.config.js";
 import { TenantEntity } from "./entities/tenant.entity.js";
 import { buildMikroOrmOptions } from "./config/mikro-orm.config.js";
+import { IamModule } from "@hl8/core";
 
 /**
  * @description 尝试解析数据库主机名，无法解析时回退到本地地址
@@ -108,6 +109,7 @@ const resolveDatabaseHost = async (host: string): Promise<string> => {
       inject: [AppConfig],
     }) as unknown as DynamicModule,
     MikroOrmModule.forFeature([TenantEntity], "postgres"),
+    IamModule,
     // TODO: 接入租户配置、缓存、用户、认证等业务模块（待实现）
   ],
   controllers: [AppController],

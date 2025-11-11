@@ -1,0 +1,29 @@
+# hl8-aisaas-platform Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-11-11
+
+## Active Technologies
+
+- TypeScript 5.x（Node.js ≥ 20） + NestJS、Fastify、@nestjs/cqrs、CASL、MikroORM、@hl8/config、@hl8/logger (001-define-iam-spec)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+npm test && npm run lint
+
+## Code Style
+
+TypeScript 5.x（Node.js ≥ 20）: Follow standard conventions
+
+## Recent Changes
+
+- 001-define-iam-spec: Added TypeScript 5.x（Node.js ≥ 20） + NestJS、Fastify、@nestjs/cqrs、CASL、MikroORM、@hl8/config、@hl8/logger
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->
