@@ -21,7 +21,14 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "db:schema:create": "pnpm run build && mikro-orm schema:create --config ./mikro-orm.config.js",
+    "db:schema:create:run": "pnpm run build && mikro-orm schema:create --run --config ./mikro-orm.config.js",
+    "db:schema:drop": "pnpm run build && mikro-orm schema:drop --config ./mikro-orm.config.js",
+    "db:migration:create": "pnpm run build && mikro-orm migration:create --config ./mikro-orm.config.js",
+    "db:migration:up": "pnpm run build && mikro-orm migration:up --config ./mikro-orm.config.js",
+    "db:migration:down": "pnpm run build && mikro-orm migration:down --config ./mikro-orm.config.js",
+    "db:migration:list": "pnpm run build && mikro-orm migration:list --config ./mikro-orm.config.js"
   },
   "dependencies": {
     "@hl8/async-storage": "workspace:*",
@@ -46,6 +53,7 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
+    "@mikro-orm/cli": "^6.5.9",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
