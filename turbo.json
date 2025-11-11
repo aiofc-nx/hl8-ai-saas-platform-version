@@ -71,6 +71,22 @@
     },
     "clean": {
       "cache": false
+    },
+    "governance:check": {
+      "cache": false,
+      "outputs": [
+        "docs/governance/reports/constitution-check.json",
+        "docs/governance/reports/constitution-check.md",
+        "docs/governance/reports/milestone-report.json",
+        "docs/governance/reports/milestone-report.md"
+      ],
+      "inputs": [
+        "docs/designs/**/*.md",
+        "docs/governance/**/*.md",
+        "scripts/iam/**/*.js",
+        "specs/**/*.md",
+        "package.json"
+      ]
     }
   }
 }
