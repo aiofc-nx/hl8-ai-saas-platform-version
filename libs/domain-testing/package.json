@@ -1,0 +1,33 @@
+{
+  "name": "@hl8/domain-testing",
+  "version": "0.1.0",
+  "description": "领域层测试工具集，提供聚合与值对象的测试基座。",
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.11.0"
+}
+

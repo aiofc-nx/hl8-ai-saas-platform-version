@@ -3,3 +3,5 @@ packages:
 - packages/*
 - libs/infra/**
 - libs/domains/**
+- libs/domain-core
+- libs/domain-testing
