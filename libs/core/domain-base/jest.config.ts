@@ -1,7 +1,7 @@
 import type { Config } from "jest";
 
 const config: Config = {
-  displayName: "@hl8/domain-core",
+  displayName: "@hl8/domain-base",
   preset: "ts-jest/presets/default-esm",
   testEnvironment: "node",
   rootDir: ".",
@@ -23,10 +23,10 @@ const config: Config = {
     ],
   },
   moduleFileExtensions: ["ts", "js"],
-  coverageDirectory: "../../coverage/libs/domain-core",
+  coverageDirectory: "../../coverage/libs/domain-base",
   coverageProvider: "v8",
   testMatch: ["**/*.spec.ts"],
-  setupFilesAfterEnv: ["<rootDir>/../../jest.setup.js"],
+  setupFilesAfterEnv: ["<rootDir>/../../../jest.setup.js"],
   passWithNoTests: true,
 };
 

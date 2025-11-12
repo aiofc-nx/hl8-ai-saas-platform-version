@@ -1,10 +1,10 @@
 {
-  "name": "@hl8/domain-core",
+  "name": "@hl8/domain-base",
   "version": "0.1.0",
   "description": "HL8 平台专用的领域核心库，提供聚合、实体、值对象与事件等纯领域能力。",
   "keywords": [
     "nestjs",
-    "domain-core"
+    "domain-base"
   ],
   "type": "module",
   "license": "MIT",

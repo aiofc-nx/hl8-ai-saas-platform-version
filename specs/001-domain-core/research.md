@@ -3,7 +3,7 @@
 ## 决策项与依据
 
 ### 决策 1：领域层保持基础设施无感知，统一通过值对象封装上下文
-- **Decision**：聚合根、实体与值对象仅依赖 `@hl8/domain-core` 内部工具与 `class-validator` / `class-transformer`，禁止直接耦合 NestJS、MikroORM 等实现。
+- **Decision**：聚合根、实体与值对象仅依赖 `@hl8/domain-base` 内部工具与 `class-validator` / `class-transformer`，禁止直接耦合 NestJS、MikroORM 等实现。
 - **Rationale**：与 `docs/designs/platform-domain-baseline.md` 的“领域纯净性”“统一领域语言”原则一致，确保各业务上下文可以在不同运行时环境（命令、事件、批处理）中复用领域模型。
 - **Alternatives considered**：直接在领域层引入 MikroORM 实体或 NestJS 装饰器以减少重复代码 —— 违背分层约束，限制跨平台复用，故放弃。
 

@@ -18,7 +18,7 @@
 
 ### 3. 目录与模块结构
 ```
-libs/domain-core/
+libs/core/domain-base/
 ├── aggregates/
 │   ├── aggregate-root.base.ts        # 含审计字段、不变式守卫、租户/组织/部门上下文断言
 │   └── aggregate-id.value-object.ts  # UUID v4 聚合标识
@@ -26,7 +26,7 @@ libs/domain-core/
 │   └── entity.base.ts                # 可选审计信息支持
 ├── events/
 │   ├── domain-event.base.ts
-│   └── domain-event-bus.interface.ts
+│   └── domain-event-dispatcher.interface.ts
 ├── repositories/
 │   └── repository.interface.ts
 ├── value-objects/
@@ -38,23 +38,23 @@ libs/domain-core/
 │   └── domain-service.interface.ts
 ├── auditing/
 │   ├── audit-trail.value-object.ts   # 统一审计轨迹
-│   └── soft-delete-status.vo.ts      # 软删除状态（删除时间/操作者）
+│   └── soft-delete-status.value-object.ts      # 软删除状态（删除时间/操作者）
 ├── exceptions/
 │   └── domain-exception.base.ts
 └── utils/
-    ├── domain-validation.ts          # 守卫/校验工具
+    ├── domain-guards.ts              # 守卫/校验工具
     └── uuid-generator.ts             # UUID v4 生成器
 ```
 
-- `domain-core` 作为单独 npm 包或 pnpm workspace 包提供，所有领域模块通过依赖导入。
+- `domain-base` 作为 pnpm workspace 包提供于 `libs/core/domain-base/`，所有领域模块通过依赖导入。
 - 值对象若与具体业务强相关（如权限类型），可在领域模块内扩展，但必须继承平台提供的基类或满足相同规范。
 
 ### 4. 核心组件与约束
 
 #### 4.1 聚合根与实体
 - **AggregateRootBase**：
-  - 提供 `id`、`tenantId`、`createdAt`、`createdBy`、`updatedAt`、`updatedBy`、`version` 等审计字段。
-  - 默认包含软删除状态（如 `deletedAt`、`deletedBy`、`isDeleted`），并提供恢复方法。
+  - 提供 `id`、`tenantId`、`organizationId`、`departmentId`、`auditTrail`、`softDeleteStatus`、`version` 等聚合上下文访问器。
+  - 默认包含软删除状态（如 `deletedAt`、`deletedBy`、`isDeleted`），并通过 `markDeleted`/`restore` 提供恢复方法。
   - 内置领域事件队列（`addDomainEvent`、`pullDomainEvents`）。
   - 强制执行不变式检查（通过 protected `ensureValidState` 方法实现），并在公共操作前通过 `assertTenantContext` 类方法校验租户上下文。
 - **EntityBase**：供聚合内部实体继承，可选开启审计支持（适合需要记录操作人的内部实体）。
@@ -70,8 +70,8 @@ libs/domain-core/
 
 #### 4.2 值对象
 - **ValueObjectBase**：
-  - 提供不可变构造、等值比较 (`equals`)。
-  - 所有值对象须通过静态工厂（`create`）或命名构造函数创建，并执行参数校验。
+  - 提供不可变构造、等值比较 (`equals`) 与序列化 (`toJSON`)。
+  - 所有值对象须通过静态工厂（`create`、`fromString` 等）或命名构造函数创建，并执行参数校验。
 - **通用值对象**：
   - `TenantId`、`UserId`、`OrganizationId`、`DepartmentId` 等在共享库提供。
   - 时间类值对象统一封装 Luxon（`DateTimeValueObject`），避免直接使用原生日期。
@@ -81,7 +81,7 @@ libs/domain-core/
 
 #### 4.3 领域事件
 - **DomainEventBase**：
-  - 字段包含 `eventId`、`occurredAt`、`aggregateId` 等。
+  - 字段包含 `eventId`、`occurredAt`、`aggregateId`、`tenantId`、`auditMetadata`、`softDeleteStatus` 等。
   - 必须携带 `tenantId` 等跨模块必要上下文，防止事件丢失租户信息。
 - **事件发布流程**：
   1. 聚合根通过 `addDomainEvent` 收集事件。
@@ -128,7 +128,7 @@ libs/domain-core/
 ### 7. 测试与质量要求
 - 聚合根、值对象需编写旁置单元测试（覆盖不变式、行为、事件触发）。
 - 提供领域层测试基座（mock 仓储、值对象工厂）。
-- `@hl8/domain-testing` 提供 `AggregateTestHarness` 等工具，聚合测试必须优先复用以减少重复样板。
+- `@hl8/domain-testing`（位于 `libs/core/domain-testing/`）提供 `AggregateTestHarness` 等工具，聚合测试必须优先复用以减少重复样板。
 - 领域事件需编写契约测试，确保事件结构符合约定。
 - 质量门槛：核心聚合单元测试覆盖率 ≥ 95%，领域服务 ≥ 90%。
 

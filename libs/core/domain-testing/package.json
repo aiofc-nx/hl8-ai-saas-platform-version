@@ -19,8 +19,12 @@
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
+    "@hl8/domain-base": "^0.1.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2"
+  },
+  "devDependencies": {
+    "@hl8/domain-base": "workspace:*"
   },
   "files": [
     "dist"

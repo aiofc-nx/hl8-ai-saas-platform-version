@@ -1,6 +1,6 @@
 /**
  * @public
- * @remarks `@hl8/domain-core` 导出入口，后续任务将逐步补充各子目录的具体实现。
+ * @remarks `@hl8/domain-base` 导出入口，后续任务将逐步补充各子目录的具体实现。
  */
 export * from "./aggregates/index.js";
 export * from "./auditing/index.js";

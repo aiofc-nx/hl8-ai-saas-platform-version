@@ -31,7 +31,7 @@
 
 ### 3. 目录与模块组织
 ```
-libs/domain-core/
+libs/core/domain-base/
 ├── aggregates/
 │   ├── aggregate-root.base.ts       # 聚合根抽象基类（含审计、租户/组织/部门断言）
 │   └── aggregate-id.value-object.ts # 聚合唯一标识（UUID v4）
@@ -39,103 +39,113 @@ libs/domain-core/
 │   └── entity.base.ts               # 聚合内部实体基类（可选审计）
 ├── events/
 │   ├── domain-event.base.ts         # 领域事件基类（含上下文与操作人）
-│   └── domain-event-dispatcher.ts   # (可选) 领域事件调度器接口
+│   └── domain-event-dispatcher.interface.ts   # (可选) 领域事件调度器接口
 ├── repositories/
 │   └── repository.interface.ts      # 仓储接口规范
 ├── value-objects/
 │   ├── tenant-id.vo.ts
 │   ├── user-id.vo.ts
 │   ├── organization-id.vo.ts
-│   └── department-id.vo.ts
+│   ├── department-id.vo.ts
+│   └── date-time.value-object.ts
 ├── auditing/
 │   ├── audit-trail.value-object.ts  # 审计轨迹
-│   ├── audit-metadata.ts            # 审计元数据
-│   └── soft-delete-status.vo.ts     # 软删除状态
+│   └── soft-delete-status.value-object.ts     # 软删除状态
 ├── services/
 │   └── domain-service.interface.ts
 ├── exceptions/
 │   └── domain-exception.base.ts
 └── utils/
-    ├── guard.ts                     # 不变式守卫、校验工具
-    ├── domain-date-time.ts          # 领域时间工具
+    ├── domain-guards.ts             # 不变式守卫、校验工具
     └── uuid-generator.ts            # 标识生成（UUID v4）
 ```
 
 - **扩展目录**：支持在 `libs/domain-extensions/` 中提供规格模式、聚合快照等可选功能。
-- **依赖方式**：领域模块通过 `import { AggregateRootBase } from "@hl8/domain-core";` 等方式引入公共能力。
+- **依赖方式**：领域模块通过 `import { AggregateRootBase } from "@hl8/domain-base";` 等方式引入公共能力。
 
 ### 4. 核心组件设计
 
 #### 4.1 聚合根与实体
 ```typescript
-/**
- * 聚合根基类
- */
-export abstract class AggregateRootBase<TId extends AggregateId> {
-  protected readonly _id: TId;
-  private readonly domainEvents: DomainEventBase[] = [];
-  protected _auditTrail: AuditTrail;
-  protected _softDeleteStatus: SoftDeleteStatus;
+export interface AggregateRootProps<TId extends AggregateId> {
+  readonly id: TId;
+  readonly tenantId: TenantId;
+  readonly organizationId?: OrganizationId;
+  readonly departmentId?: DepartmentId;
+  readonly auditTrail?: AuditTrail;
+  readonly softDeleteStatus?: SoftDeleteStatus;
+  readonly version?: number;
+}
+
+export abstract class AggregateRootBase<TId extends AggregateId> extends EntityBase<TId> {
   protected _tenantId: TenantId;
   protected _organizationId?: OrganizationId;
   protected _departmentId?: DepartmentId;
+  protected _auditTrail: AuditTrail;
+  protected _softDeleteStatus: SoftDeleteStatus;
   protected _version: number;
+  private readonly domainEvents: DomainEventBase[] = [];
 
   protected constructor(props: AggregateRootProps<TId>) {
-    this._id = props.id ?? AggregateId.generate();
-    this._auditTrail = props.auditTrail ?? AuditTrail.create({});
-    this._softDeleteStatus = props.softDeleteStatus ?? SoftDeleteStatus.create();
+    super(props.id);
+    assertDefined(props.tenantId, "聚合根必须隶属于租户");
+
     this._tenantId = props.tenantId;
     this._organizationId = props.organizationId;
     this._departmentId = props.departmentId;
+    this._auditTrail = props.auditTrail ?? AuditTrail.create({ createdBy: null });
+    this._softDeleteStatus = props.softDeleteStatus ?? SoftDeleteStatus.create();
     this._version = props.version ?? 0;
   }
 
   protected abstract ensureValidState(): void;
 
-  protected touch(initiator?: UserId | null): void {
-    this._auditTrail = this._auditTrail.update({ updatedBy: initiator });
+  protected touch(actor: UserId | null): void {
+    this._auditTrail = this._auditTrail.update({ updatedBy: actor ?? null });
   }
 
-  protected assertSameTenant(tenantId: TenantId): void {
+  protected markDeleted(actor: UserId | null): void {
+    this._softDeleteStatus = this._softDeleteStatus.markDeleted(actor ?? null);
+    this.touch(actor);
+  }
+
+  protected restore(actor: UserId | null): void {
+    this._softDeleteStatus = this._softDeleteStatus.restore(actor ?? null);
+    this.touch(actor);
+  }
+
+  protected assertSameTenant(tenantId: TenantId, message?: string): void {
     if (!this._tenantId.equals(tenantId)) {
-      throw new DomainException("跨租户操作被拒绝");
+      throw new DomainException(message ?? "跨租户操作被拒绝");
     }
   }
 
-  protected assertSameOrganization(organizationId: OrganizationId | undefined): void {
+  protected assertSameOrganization(organizationId?: OrganizationId, message?: string): void {
     if (!this._organizationId) {
       return;
     }
     if (!organizationId || !this._organizationId.equals(organizationId)) {
-      throw new DomainException("跨组织操作被拒绝");
+      throw new DomainException(message ?? "跨组织操作被拒绝");
     }
   }
 
-  protected assertSameDepartment(departmentId: DepartmentId | undefined): void {
+  protected assertSameDepartment(departmentId?: DepartmentId, message?: string): void {
     if (!this._departmentId) {
       return;
     }
     if (!departmentId || !this._departmentId.equals(departmentId)) {
-      throw new DomainException("跨部门操作被拒绝");
+      throw new DomainException(message ?? "跨部门操作被拒绝");
     }
-  }
-
-  protected markDeleted(initiator?: UserId | null): void {
-    this._softDeleteStatus = this._softDeleteStatus.markDeleted(initiator);
-    this.touch(initiator);
-  }
-
-  protected restore(initiator?: UserId | null): void {
-    this._softDeleteStatus = this._softDeleteStatus.restore(initiator);
-    this.touch(initiator);
   }
 
   protected addDomainEvent(event: DomainEventBase): void {
     this.domainEvents.push(event);
   }
 
-  pullDomainEvents(): DomainEventBase[] {
+  public pullDomainEvents(): DomainEventBase[] {
+    if (this.domainEvents.length === 0) {
+      return [];
+    }
     const events = [...this.domainEvents];
     this.domainEvents.length = 0;
     return events;
@@ -150,52 +160,64 @@ export abstract class AggregateRootBase<TId extends AggregateId> {
 
 #### 4.2 值对象
 ```typescript
-/**
- * 审计轨迹值对象
- */
-export class AuditTrail extends ValueObjectBase<{
-  createdAt: DateTimeValueObject;
-  createdBy: UserId | null;
-  updatedAt: DateTimeValueObject;
-  updatedBy: UserId | null;
-}> {
+interface AuditTrailProps {
+  readonly createdAt: DateTimeValueObject;
+  readonly createdBy: UserId | null;
+  readonly updatedAt: DateTimeValueObject;
+  readonly updatedBy: UserId | null;
+}
+
+export class AuditTrail extends ValueObjectBase<AuditTrailProps> {
   private constructor(props: AuditTrailProps) {
     super(props);
   }
 
-  static create(initial: { createdBy?: UserId | null; updatedBy?: UserId | null }): AuditTrail {
+  public static create(initial: {
+    createdBy?: UserId | null;
+    updatedBy?: UserId | null;
+  }): AuditTrail {
     const now = DateTimeValueObject.now();
+    const createdBy = initial.createdBy ?? null;
+    const updatedBy = initial.updatedBy ?? initial.createdBy ?? null;
+
     return new AuditTrail({
       createdAt: now,
-      createdBy: initial.createdBy ?? null,
+      createdBy,
       updatedAt: now,
-      updatedBy: initial.updatedBy ?? initial.createdBy ?? null,
+      updatedBy,
     });
   }
 
-  update(metadata: { updatedBy?: UserId | null }): AuditTrail {
+  public update(change: { updatedBy?: UserId | null }): AuditTrail {
     return new AuditTrail({
-      createdAt: this.props.createdAt,
-      createdBy: this.props.createdBy,
+      createdAt: this.createdAt,
+      createdBy: this.createdBy,
       updatedAt: DateTimeValueObject.now(),
-      updatedBy: metadata.updatedBy ?? this.props.updatedBy ?? null,
+      updatedBy: change.updatedBy ?? this.updatedBy ?? null,
     });
+  }
+
+  public get createdAt(): DateTimeValueObject {
+    return this.props.createdAt;
+  }
+
+  public get updatedAt(): DateTimeValueObject {
+    return this.props.updatedAt;
   }
 }
 
-/**
- * 软删除状态值对象
- */
-export class SoftDeleteStatus extends ValueObjectBase<{
-  isDeleted: boolean;
-  deletedAt: DateTimeValueObject | null;
-  deletedBy: UserId | null;
-}> {
-  private constructor(props: SoftDeleteStatusProps) {
+interface SoftDeleteProps {
+  readonly isDeleted: boolean;
+  readonly deletedAt: DateTimeValueObject | null;
+  readonly deletedBy: UserId | null;
+}
+
+export class SoftDeleteStatus extends ValueObjectBase<SoftDeleteProps> {
+  private constructor(props: SoftDeleteProps) {
     super(props);
   }
 
-  static create(initial?: {
+  public static create(initial?: {
     isDeleted?: boolean;
     deletedAt?: DateTimeValueObject | null;
     deletedBy?: UserId | null;
@@ -207,26 +229,32 @@ export class SoftDeleteStatus extends ValueObjectBase<{
     });
   }
 
-  markDeleted(initiator?: UserId | null): SoftDeleteStatus {
-    if (this.props.isDeleted) {
+  public markDeleted(actor: UserId | null = null): SoftDeleteStatus {
+    if (this.isDeleted) {
       return this;
     }
+
     return new SoftDeleteStatus({
       isDeleted: true,
       deletedAt: DateTimeValueObject.now(),
-      deletedBy: initiator ?? null,
+      deletedBy: actor ?? null,
     });
   }
 
-  restore(initiator?: UserId | null): SoftDeleteStatus {
-    if (!this.props.isDeleted) {
+  public restore(actor: UserId | null = null): SoftDeleteStatus {
+    if (!this.isDeleted) {
       return this;
     }
+
     return new SoftDeleteStatus({
       isDeleted: false,
       deletedAt: null,
-      deletedBy: initiator ?? null,
+      deletedBy: actor ?? null,
     });
+  }
+
+  public get isDeleted(): boolean {
+    return this.props.isDeleted;
   }
 }
 ```
@@ -238,18 +266,36 @@ export class SoftDeleteStatus extends ValueObjectBase<{
 
 #### 4.3 领域事件
 ```typescript
-export abstract class DomainEventBase {
-  constructor(
-    public readonly eventId: string,
-    public readonly occurredAt: DateTimeValueObject,
-    public readonly aggregateId: string,
-    public readonly tenantId: TenantId,
-    public readonly triggeredBy: UserId | null,
-    public readonly auditMetadata: AuditTrail,
-    public readonly softDeleteStatus: SoftDeleteStatus,
-  ) {}
+export interface DomainEventProps {
+  readonly eventId: string;
+  readonly occurredAt: DateTimeValueObject;
+  readonly aggregateId: string;
+  readonly tenantId: TenantId;
+  readonly organizationId?: OrganizationId;
+  readonly departmentId?: DepartmentId;
+  readonly triggeredBy: UserId | null;
+  readonly auditMetadata: AuditTrail;
+  readonly softDeleteStatus: SoftDeleteStatus;
+}
 
-  abstract eventName(): string;
+export abstract class DomainEventBase {
+  private readonly props: DomainEventProps;
+
+  protected constructor(props: DomainEventProps) {
+    assertUuid(props.eventId, "事件标识必须为合法的 UUID");
+    assertNonEmptyString(props.aggregateId, "事件必须关联聚合标识");
+    this.props = props;
+  }
+
+  public get eventId(): string {
+    return this.props.eventId;
+  }
+
+  public get tenantId(): TenantId {
+    return this.props.tenantId;
+  }
+
+  public abstract eventName(): string;
 }
 ```
 
@@ -309,7 +355,7 @@ export interface Repository<TAggregate extends AggregateRootBase<TId>, TId exten
 - **值对象测试**：验证构造校验、等值比较。
 - **领域服务测试**：使用 stub 仓储、值对象，确保业务规则正确。
 - **契约测试**：对领域事件结构建立 fixture，供应用层与其他模块共享。
-- 提供 `libs/domain-testing/` 工具包（mock 仓储、事件断言器、值对象工厂）。
+- 提供 `libs/core/domain-testing/` 工具包（mock 仓储、事件断言器、值对象工厂）。
 
 ### 9. 质量与治理
 - 代码需通过 ESLint、TypeScript 严格模式；所有公共 API 注释使用中文 TSDoc。

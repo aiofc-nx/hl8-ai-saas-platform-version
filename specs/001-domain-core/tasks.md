@@ -1,6 +1,6 @@
 # 任务清单：平台领域核心能力
 
-**输入**：来自 `/specs/001-domain-core/` 的设计文档  
+**输入**：来自 `/specs/001-domain-base/` 的设计文档  
 **前置文件**：plan.md、spec.md、research.md、data-model.md、contracts/、quickstart.md
 
 **测试说明**：规格要求核心聚合与值对象的单元测试覆盖率 ≥95%，因此保留对应的测试任务并采用先写测试的流程。
@@ -15,20 +15,20 @@
 
 ## 路径约定
 
-- 领域核心库：`libs/domain-core/src/**`
-- 单元测试：与被测文件同目录或位于 `libs/domain-core/tests/**`
+- 领域核心库：`libs/domain-base/src/**`
+- 单元测试：与被测文件同目录或位于 `libs/domain-base/tests/**`
 - 领域测试基座：`libs/domain-testing/**`
-- 设计与文档：`specs/001-domain-core/**`、`docs/designs/**`
+- 设计与文档：`specs/001-domain-base/**`、`docs/designs/**`
 
 ---
 
 ## 阶段 1：环境搭建（共享基础设施）
 
-**目的**：确保 `@hl8/domain-core` 遵循领域纯净性约束，消除对基础设施模块的耦合。
+**目的**：确保 `@hl8/domain-base` 遵循领域纯净性约束，消除对基础设施模块的耦合。
 
-- [x] T001 移除领域层不允许的基础设施依赖并校验版本，更新 `libs/domain-core/package.json`
-- [x] T002 对齐 TypeScript NodeNext 配置与严格选项，更新 `libs/domain-core/tsconfig.json`
-- [x] T003 调整 Jest 设置以支持 NodeNext 与实验性 VM 模块，更新 `libs/domain-core/jest.config.ts`
+- [x] T001 移除领域层不允许的基础设施依赖并校验版本，更新 `libs/domain-base/package.json`
+- [x] T002 对齐 TypeScript NodeNext 配置与严格选项，更新 `libs/domain-base/tsconfig.json`
+- [x] T003 调整 Jest 设置以支持 NodeNext 与实验性 VM 模块，更新 `libs/domain-base/jest.config.ts`
 - [x] T004 初始化纯领域测试基座目录，创建 `libs/domain-testing/package.json` 与 `libs/domain-testing/tsconfig.json`
 
 ---
@@ -40,7 +40,7 @@
 **⚠️ 严格要求**：此阶段完成前不得开始任何用户故事任务。
 
 - [x] T005 将 `libs/domain-testing` 納入工作空间并配置构建脚本，更新 `pnpm-workspace.yaml` 与根 `package.json`
-- [x] T006 建立公共导出骨架与目录结构，初始化 `libs/domain-core/src/index.ts`
+- [x] T006 建立公共导出骨架与目录结构，初始化 `libs/domain-base/src/index.ts`
 
 **检查点**：根目录结构、工作空间与导出骨架就绪，可启动用户故事。
 
@@ -50,25 +50,25 @@
 
 **目标**：提供统一的聚合根、实体和值对象基类，实现租户隔离、审计记录、软删除与基础守卫能力。
 
-**独立验证方式**：在示例领域模块中引用 `@hl8/domain-core`，通过单元测试确认聚合构造、软删除、租户断言与审计字段自动生效。
+**独立验证方式**：在示例领域模块中引用 `@hl8/domain-base`，通过单元测试确认聚合构造、软删除、租户断言与审计字段自动生效。
 
 ### 用户故事 1 的测试
 
-- [x] T007 [P] [US1] 编写聚合根基线行为测试，创建 `libs/domain-core/tests/aggregates/aggregate-root.base.spec.ts`
-- [x] T008 [P] [US1] 编写租户标识与审计值对象测试，创建 `libs/domain-core/tests/value-objects/tenant-context.value-object.spec.ts`
+- [x] T007 [P] [US1] 编写聚合根基线行为测试，创建 `libs/domain-base/tests/aggregates/aggregate-root.base.spec.ts`
+- [x] T008 [P] [US1] 编写租户标识与审计值对象测试，创建 `libs/domain-base/tests/value-objects/tenant-context.value-object.spec.ts`
 
 ### 用户故事 1 的实现
 
-- [x] T009 [US1] 实现聚合标识值对象 `libs/domain-core/src/aggregates/aggregate-id.value-object.ts`
-- [x] T010 [US1] 实现多租户上下文值对象 `libs/domain-core/src/value-objects/tenant-id.vo.ts`、`organization-id.vo.ts`、`department-id.vo.ts`、`user-id.vo.ts`
-- [x] T011 [US1] 实现审计轨迹值对象 `libs/domain-core/src/auditing/audit-trail.value-object.ts`
-- [x] T012 [US1] 实现软删除状态值对象 `libs/domain-core/src/auditing/soft-delete-status.value-object.ts`
-- [x] T013 [US1] 实现领域守卫工具集 `libs/domain-core/src/utils/domain-guards.ts`
-- [x] T014 [US1] 实现 UUID 生成器封装 `libs/domain-core/src/utils/uuid-generator.ts`
-- [x] T015 [US1] 实现实体基类 `libs/domain-core/src/entities/entity.base.ts`
-- [x] T016 [US1] 实现聚合根基类（含租户断言、审计、软删除）`libs/domain-core/src/aggregates/aggregate-root.base.ts`
+- [x] T009 [US1] 实现聚合标识值对象 `libs/domain-base/src/aggregates/aggregate-id.value-object.ts`
+- [x] T010 [US1] 实现多租户上下文值对象 `libs/domain-base/src/value-objects/tenant-id.vo.ts`、`organization-id.vo.ts`、`department-id.vo.ts`、`user-id.vo.ts`
+- [x] T011 [US1] 实现审计轨迹值对象 `libs/domain-base/src/auditing/audit-trail.value-object.ts`
+- [x] T012 [US1] 实现软删除状态值对象 `libs/domain-base/src/auditing/soft-delete-status.value-object.ts`
+- [x] T013 [US1] 实现领域守卫工具集 `libs/domain-base/src/utils/domain-guards.ts`
+- [x] T014 [US1] 实现 UUID 生成器封装 `libs/domain-base/src/utils/uuid-generator.ts`
+- [x] T015 [US1] 实现实体基类 `libs/domain-base/src/entities/entity.base.ts`
+- [x] T016 [US1] 实现聚合根基类（含租户断言、审计、软删除）`libs/domain-base/src/aggregates/aggregate-root.base.ts`
 - [x] T017 [US1] 构建聚合测试基座 `libs/domain-testing/src/aggregate-test-harness.ts`
-- [x] T018 [US1] 更新公共导出与中文 README，修改 `libs/domain-core/src/index.ts` 与 `libs/domain-core/README.md`
+- [x] T018 [US1] 更新公共导出与中文 README，修改 `libs/domain-base/src/index.ts` 与 `libs/domain-base/README.md`
 
 **检查点**：聚合根、实体和值对象可独立使用，测试通过并满足软删除与审计行为。
 
@@ -82,13 +82,13 @@
 
 ### 用户故事 2 的测试
 
-- [x] T019 [P] [US2] 编写领域事件基类与聚合事件队列测试，创建 `libs/domain-core/tests/events/domain-event.base.spec.ts`
+- [x] T019 [P] [US2] 编写领域事件基类与聚合事件队列测试，创建 `libs/domain-base/tests/events/domain-event.base.spec.ts`
 
 ### 用户故事 2 的实现
 
-- [x] T020 [US2] 实现领域事件基类（含上下文与审计）`libs/domain-core/src/events/domain-event.base.ts`
-- [x] T021 [US2] 定义领域事件调度契约 `libs/domain-core/src/events/domain-event-dispatcher.interface.ts`
-- [x] T022 [US2] 扩展聚合根基类以支持事件队列与 `pullDomainEvents` 行为 `libs/domain-core/src/aggregates/aggregate-root.base.ts`
+- [x] T020 [US2] 实现领域事件基类（含上下文与审计）`libs/domain-base/src/events/domain-event.base.ts`
+- [x] T021 [US2] 定义领域事件调度契约 `libs/domain-base/src/events/domain-event-dispatcher.interface.ts`
+- [x] T022 [US2] 扩展聚合根基类以支持事件队列与 `pullDomainEvents` 行为 `libs/domain-base/src/aggregates/aggregate-root.base.ts`
 
 **检查点**：事件测试通过，聚合根能够生成并导出完整上下文的领域事件。
 
@@ -102,12 +102,12 @@
 
 ### 用户故事 3 的测试
 
-- [x] T023 [P] [US3] 编写仓储契约测试并验证租户过滤约束，创建 `libs/domain-core/tests/repositories/repository.interface.spec.ts`
+- [x] T023 [P] [US3] 编写仓储契约测试并验证租户过滤约束，创建 `libs/domain-base/tests/repositories/repository.interface.spec.ts`
 
 ### 用户故事 3 的实现
 
-- [x] T024 [US3] 定义仓储接口与查询条件类型 `libs/domain-core/src/repositories/repository.interface.ts`
-- [x] T025 [US3] 定义领域服务接口并声明使用约束 `libs/domain-core/src/services/domain-service.interface.ts`
+- [x] T024 [US3] 定义仓储接口与查询条件类型 `libs/domain-base/src/repositories/repository.interface.ts`
+- [x] T025 [US3] 定义领域服务接口并声明使用约束 `libs/domain-base/src/services/domain-service.interface.ts`
 
 **检查点**：仓储与领域服务契约可独立复用，测试验证租户与软删除约束无回归。
 
@@ -117,9 +117,9 @@
 
 **目的**：同步文档、契约与质量门槛，保证全局一致性。
 
-- [x] T026 [P] 校验并补充 Scaffolding API 契约示例，更新 `specs/001-domain-core/contracts/domain-core.openapi.yaml`
+- [x] T026 [P] 校验并补充 Scaffolding API 契约示例，更新 `specs/001-domain-base/contracts/domain-base.openapi.yaml`
 - [x] T027 汇总多租户守卫与仓储约束写入设计文档 `docs/designs/platform-domain-baseline.md`
-- [x] T028 执行覆盖率校验并记录 quickstart 更新，修改 `libs/domain-core/tests/` 与 `specs/001-domain-core/quickstart.md`
+- [x] T028 执行覆盖率校验并记录 quickstart 更新，修改 `libs/domain-base/tests/` 与 `specs/001-domain-base/quickstart.md`
 
 ---
 

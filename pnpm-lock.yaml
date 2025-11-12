@@ -113,25 +113,25 @@ importers:
         version: 6.7.3
       '@hl8/async-storage':
         specifier: workspace:*
-        version: link:../../libs/infra/async-storage
+        version: link:../../libs/common/async-storage
       '@hl8/bootstrap':
         specifier: workspace:*
-        version: link:../../libs/infra/bootstrap
+        version: link:../../libs/bootstrap
       '@hl8/config':
         specifier: workspace:*
-        version: link:../../libs/infra/config
+        version: link:../../libs/common/config
       '@hl8/logger':
         specifier: workspace:*
-        version: link:../../libs/infra/logger
+        version: link:../../libs/common/logger
       '@hl8/mikro-orm-nestjs':
         specifier: workspace:*
-        version: link:../../libs/infra/mikro-orm-nestjs
+        version: link:../../libs/mikro-orm-nestjs
       '@hl8/multi-tenancy':
         specifier: workspace:*
-        version: link:../../libs/infra/multi-tenancy
+        version: link:../../libs/multi-tenancy
       '@hl8/swagger':
         specifier: workspace:*
-        version: link:../../libs/infra/swagger
+        version: link:../../libs/common/swagger
       '@mikro-orm/core':
         specifier: ^6.5.9
         version: 6.5.9
@@ -276,22 +276,22 @@ importers:
     dependencies:
       '@hl8/async-storage':
         specifier: workspace:*
-        version: link:../../libs/infra/async-storage
+        version: link:../../libs/common/async-storage
       '@hl8/bootstrap':
         specifier: workspace:*
-        version: link:../../libs/infra/bootstrap
+        version: link:../../libs/bootstrap
       '@hl8/config':
         specifier: workspace:*
-        version: link:../../libs/infra/config
+        version: link:../../libs/common/config
       '@hl8/logger':
         specifier: workspace:*
-        version: link:../../libs/infra/logger
+        version: link:../../libs/common/logger
       '@hl8/multi-tenancy':
         specifier: workspace:*
-        version: link:../../libs/infra/multi-tenancy
+        version: link:../../libs/multi-tenancy
       '@hl8/swagger':
         specifier: workspace:*
-        version: link:../../libs/infra/swagger
+        version: link:../../libs/common/swagger
       '@nestjs/common':
         specifier: ^11.0.1
         version: 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -384,103 +384,14 @@ importers:
         specifier: ^8.20.0
         version: 8.46.3(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
 
-  libs/domain-core:
-    dependencies:
-      class-transformer:
-        specifier: 0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: 0.14.2
-        version: 0.14.2
-      reflect-metadata:
-        specifier: 0.2.2
-        version: 0.2.2
-    devDependencies:
-      '@hl8/domain-testing':
-        specifier: workspace:*
-        version: link:../domain-testing
-      '@jest/globals':
-        specifier: ^30.2.0
-        version: 30.2.0
-      '@nestjs/testing':
-        specifier: 11.1.8
-        version: 11.1.8(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)(@nestjs/platform-express@11.1.8)
-      '@types/jest':
-        specifier: ^30.0.0
-        version: 30.0.0
-      '@types/node':
-        specifier: 24.10.0
-        version: 24.10.0
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      eslint:
-        specifier: 9.39.1
-        version: 9.39.1(jiti@2.6.1)
-      jest:
-        specifier: ^30.2.0
-        version: 30.2.0(@types/node@24.10.0)(ts-node@10.9.2(@types/node@24.10.0)(typescript@5.9.3))
-      supertest:
-        specifier: ^7.0.0
-        version: 7.1.4
-      ts-jest:
-        specifier: ^29.4.5
-        version: 29.4.5(@babel/core@7.28.5)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.28.5))(jest-util@30.2.0)(jest@30.2.0(@types/node@24.10.0)(ts-node@10.9.2(@types/node@24.10.0)(typescript@5.9.3)))(typescript@5.9.3)
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@24.10.0)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  libs/domain-testing:
-    dependencies:
-      class-transformer:
-        specifier: ^0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: ^0.14.2
-        version: 0.14.2
-
-  libs/infra/async-storage:
-    dependencies:
-      '@nestjs/common':
-        specifier: 11.1.8
-        version: 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      nestjs-cls:
-        specifier: ^6.0.1
-        version: 6.0.1(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-    devDependencies:
-      '@jest/globals':
-        specifier: ^30.2.0
-        version: 30.2.0
-      '@types/debug':
-        specifier: ^4.1.12
-        version: 4.1.12
-      '@types/jest':
-        specifier: ^30.0.0
-        version: 30.0.0
-      '@types/node':
-        specifier: 24.10.0
-        version: 24.10.0
-      jest:
-        specifier: ^30.2.0
-        version: 30.2.0(@types/node@24.10.0)(ts-node@10.9.2(@types/node@24.10.0)(typescript@5.9.3))
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@24.10.0)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  libs/infra/bootstrap:
+  libs/bootstrap:
     dependencies:
       '@hl8/logger':
         specifier: workspace:*
-        version: link:../logger
+        version: link:../common/logger
       '@hl8/swagger':
         specifier: workspace:*
-        version: link:../swagger
+        version: link:../common/swagger
       '@nestjs/common':
         specifier: 11.1.8
         version: 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -546,20 +457,20 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/infra/cache:
+  libs/cache:
     dependencies:
       '@anchan828/nest-redlock':
         specifier: ^0.4.21
         version: 0.4.22
       '@hl8/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../common/config
       '@hl8/exceptions':
         specifier: workspace:*
-        version: link:../exceptions
+        version: link:../common/exceptions
       '@hl8/logger':
         specifier: workspace:*
-        version: link:../logger
+        version: link:../common/logger
       '@liaoliaots/nestjs-redis':
         specifier: ^9.0.0
         version: 9.0.5(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)(ioredis@5.8.2)
@@ -610,7 +521,38 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/infra/config:
+  libs/common/async-storage:
+    dependencies:
+      '@nestjs/common':
+        specifier: 11.1.8
+        version: 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      nestjs-cls:
+        specifier: ^6.0.1
+        version: 6.0.1(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+    devDependencies:
+      '@jest/globals':
+        specifier: ^30.2.0
+        version: 30.2.0
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      '@types/node':
+        specifier: 24.10.0
+        version: 24.10.0
+      jest:
+        specifier: ^30.2.0
+        version: 30.2.0(@types/node@24.10.0)(ts-node@10.9.2(@types/node@24.10.0)(typescript@5.9.3))
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@types/node@24.10.0)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  libs/common/config:
     dependencies:
       '@nestjs/common':
         specifier: 11.1.8
@@ -671,7 +613,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/infra/exceptions:
+  libs/common/exceptions:
     dependencies:
       '@hl8/logger':
         specifier: workspace:*
@@ -714,7 +656,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/infra/logger:
+  libs/common/logger:
     dependencies:
       '@hl8/config':
         specifier: workspace:*
@@ -766,17 +708,115 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/infra/mikro-orm-nestjs:
+  libs/common/swagger:
+    dependencies:
+      '@nestjs/common':
+        specifier: 11.1.8
+        version: 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.2.1
+        version: 11.2.1(@fastify/static@8.3.0)(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)
+      class-transformer:
+        specifier: 0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: 0.14.2
+        version: 0.14.2
+    devDependencies:
+      '@jest/globals':
+        specifier: ^30.2.0
+        version: 30.2.0
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
+      '@types/lodash.merge':
+        specifier: ^4.6.9
+        version: 4.6.9
+      '@types/node':
+        specifier: 24.10.0
+        version: 24.10.0
+      jest:
+        specifier: ^30.2.0
+        version: 30.2.0(@types/node@24.10.0)(ts-node@10.9.2(@types/node@24.10.0)(typescript@5.9.3))
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@types/node@24.10.0)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  libs/core/domain-base:
+    dependencies:
+      class-transformer:
+        specifier: 0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: 0.14.2
+        version: 0.14.2
+      reflect-metadata:
+        specifier: 0.2.2
+        version: 0.2.2
+    devDependencies:
+      '@jest/globals':
+        specifier: ^30.2.0
+        version: 30.2.0
+      '@nestjs/testing':
+        specifier: 11.1.8
+        version: 11.1.8(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)(@nestjs/platform-express@11.1.8)
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      '@types/node':
+        specifier: 24.10.0
+        version: 24.10.0
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      eslint:
+        specifier: 9.39.1
+        version: 9.39.1(jiti@2.6.1)
+      jest:
+        specifier: ^30.2.0
+        version: 30.2.0(@types/node@24.10.0)(ts-node@10.9.2(@types/node@24.10.0)(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.1.4
+      ts-jest:
+        specifier: ^29.4.5
+        version: 29.4.5(@babel/core@7.28.5)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.28.5))(jest-util@30.2.0)(jest@30.2.0(@types/node@24.10.0)(ts-node@10.9.2(@types/node@24.10.0)(typescript@5.9.3)))(typescript@5.9.3)
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@types/node@24.10.0)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  libs/core/domain-testing:
+    dependencies:
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.2
+        version: 0.14.2
+
+  libs/mikro-orm-nestjs:
     dependencies:
       '@hl8/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../common/config
       '@hl8/exceptions':
         specifier: workspace:*
-        version: link:../exceptions
+        version: link:../common/exceptions
       '@hl8/logger':
         specifier: workspace:*
-        version: link:../logger
+        version: link:../common/logger
       '@mikro-orm/core':
         specifier: ^6.5.9
         version: 6.5.9
@@ -839,20 +879,20 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/infra/multi-tenancy:
+  libs/multi-tenancy:
     dependencies:
       '@hl8/async-storage':
         specifier: workspace:*
-        version: link:../async-storage
+        version: link:../common/async-storage
       '@hl8/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../common/config
       '@hl8/exceptions':
         specifier: workspace:*
-        version: link:../exceptions
+        version: link:../common/exceptions
       '@hl8/logger':
         specifier: workspace:*
-        version: link:../logger
+        version: link:../common/logger
       '@mikro-orm/core':
         specifier: ^6.5.9
         version: 6.5.9
@@ -887,49 +927,6 @@ importers:
       jest:
         specifier: ^30.2.0
         version: 30.2.0(@types/node@24.10.0)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  libs/infra/swagger:
-    dependencies:
-      '@nestjs/common':
-        specifier: 11.1.8
-        version: 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/swagger':
-        specifier: ^11.2.1
-        version: 11.2.1(@fastify/static@8.3.0)(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)
-      class-transformer:
-        specifier: 0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: 0.14.2
-        version: 0.14.2
-    devDependencies:
-      '@jest/globals':
-        specifier: ^30.2.0
-        version: 30.2.0
-      '@types/debug':
-        specifier: ^4.1.12
-        version: 4.1.12
-      '@types/jest':
-        specifier: ^30.0.0
-        version: 30.0.0
-      '@types/js-yaml':
-        specifier: ^4.0.9
-        version: 4.0.9
-      '@types/lodash.merge':
-        specifier: ^4.6.9
-        version: 4.6.9
-      '@types/node':
-        specifier: 24.10.0
-        version: 24.10.0
-      jest:
-        specifier: ^30.2.0
-        version: 30.2.0(@types/node@24.10.0)(ts-node@10.9.2(@types/node@24.10.0)(typescript@5.9.3))
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@24.10.0)(typescript@5.9.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

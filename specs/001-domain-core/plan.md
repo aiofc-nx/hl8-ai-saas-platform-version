@@ -1,13 +1,13 @@
 # 实施计划：平台领域核心能力
 
-**分支**：`001-domain-core` | **日期**：2025-11-11 | **规格文档**：[spec.md](./spec.md)  
-**输入**：来自 `/specs/001-domain-core/spec.md` 的功能规格
+**分支**：`001-domain-base` | **日期**：2025-11-11 | **规格文档**：[spec.md](./spec.md)  
+**输入**：来自 `/specs/001-domain-base/spec.md` 的功能规格
 
 **说明**：本模板由 `/speckit.plan` 命令生成，执行流程请参考相关命令文档。
 
 ## 摘要
 
-本计划针对 `@hl8/domain-core` 平台领域基线，目标是交付统一的聚合根、实体、值对象、领域事件、仓储接口与守卫工具，确保所有业务领域模块能够复用多租户隔离、审计、软删除与事件驱动能力。实现路径包括：
+本计划针对 `@hl8/domain-base` 平台领域基线，目标是交付统一的聚合根、实体、值对象、领域事件、仓储接口与守卫工具，确保所有业务领域模块能够复用多租户隔离、审计、软删除与事件驱动能力。实现路径包括：
 
 - 依照 `docs/designs/platform-domain-baseline.md` 与 `platform-domain-design.md`，定义可复用的领域基类、值对象与事件契约。
 - 为多租户上下文、审计轨迹、软删除状态提供标准值对象与辅助工具，禁止领域层依赖基础设施实现。
@@ -45,7 +45,7 @@
 ### 文档（本功能）
 
 ```text
-specs/001-domain-core/
+specs/001-domain-base/
 ├── plan.md              # 当前文件（/speckit.plan 生成）
 ├── research.md          # Phase 0 产出（/speckit.plan 生成）
 ├── data-model.md        # Phase 1 产出（/speckit.plan 生成）
@@ -62,7 +62,7 @@ specs/001-domain-core/
 
 ```text
 libs/
-├── domain-core/
+├── domain-base/
 │   ├── src/
 │   │   ├── aggregates/
 │   │   ├── entities/
@@ -85,7 +85,7 @@ tests/
 └── e2e/                   # 平台级端到端测试（Phase 2 规划）
 ```
 
-**结构选择说明**：采用 monorepo libs 模式，`@hl8/domain-core` 聚焦领域层基线，测试旁放在 `libs/domain-core/src/**` 同级 `*.spec.ts`；跨模块验证将在全局 `tests/` 目录按层次补充。
+**结构选择说明**：采用 monorepo libs 模式，`@hl8/domain-base` 聚焦领域层基线，测试旁放在 `libs/domain-base/src/**` 同级 `*.spec.ts`；跨模块验证将在全局 `tests/` 目录按层次补充。
 
 ## 复杂度跟踪
 
@@ -104,7 +104,7 @@ tests/
 ## Phase 1 - 设计与契约
 
 - **数据模型**：在 `data-model.md` 描述聚合根、实体、值对象、事件、仓储接口与守卫工具的字段、行为及状态转换。  
-- **API 合同**：在 `contracts/domain-core.openapi.yaml` 定义内部 Scaffolding API（聚合、值对象、事件）与规范查询接口，保障骨架生成一致性。  
+- **API 合同**：在 `contracts/domain-base.openapi.yaml` 定义内部 Scaffolding API（聚合、值对象、事件）与规范查询接口，保障骨架生成一致性。  
 - **快速入门**：`quickstart.md` 提供 30 分钟接入流程、脚手架调用示例、测试与文档要求。  
 - **Agent 上下文**：已运行 `.specify/scripts/bash/update-agent-context.sh cursor-agent`，同步最新技术背景与约束。
 

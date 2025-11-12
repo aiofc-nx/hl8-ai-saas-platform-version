@@ -3,7 +3,7 @@ info:
   title: HL8 Domain Core Scaffolding API
   version: 0.1.0
   description: >
-    内部服务接口，支持平台架构师与领域工程师基于 `@hl8/domain-core` 快速创建聚合根、值对象与领域事件骨架，
+    内部服务接口，支持平台架构师与领域工程师基于 `@hl8/domain-base` 快速创建聚合根、值对象与领域事件骨架，
     并保证多租户审计与事件契约的一致性。所有请求与响应字段使用中文描述，遵循平台章程。
 servers:
   - url: https://internal.hl8.dev/api
@@ -14,7 +14,7 @@ tags:
   - name: Reference
     description: 规范与基线查询
 paths:
-  /domain-core/aggregates:
+  /domain-base/aggregates:
     post:
       tags:
         - Scaffolding
@@ -38,7 +38,7 @@ paths:
           description: 同名聚合已存在
         '422':
           description: 输入校验失败（例如缺少租户上下文定义）
-  /domain-core/value-objects:
+  /domain-base/value-objects:
     post:
       tags:
         - Scaffolding
@@ -61,7 +61,7 @@ paths:
           description: 同名值对象已存在
         '422':
           description: 输入校验失败
-  /domain-core/events:
+  /domain-base/events:
     post:
       tags:
         - Scaffolding
@@ -85,7 +85,7 @@ paths:
           description: 同名事件已存在
         '422':
           description: 输入校验失败
-  /domain-core/reference:
+  /domain-base/reference:
     get:
       tags:
         - Reference

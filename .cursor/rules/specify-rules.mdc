@@ -4,7 +4,7 @@ Auto-generated from all feature plans. Last updated: 2025-11-12
 
 ## Active Technologies
 
-- (001-domain-core)
+- (001-domain-base)
 
 ## Project Structure
 
@@ -23,7 +23,7 @@ tests/
 
 ## Recent Changes
 
-- 001-domain-core: Added
+- 001-domain-base: Added
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
