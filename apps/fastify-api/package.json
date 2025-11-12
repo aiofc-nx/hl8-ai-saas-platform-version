@@ -35,7 +35,6 @@
     "@hl8/async-storage": "workspace:*",
     "@hl8/bootstrap": "workspace:*",
     "@hl8/config": "workspace:*",
-    "@hl8/core": "workspace:*",
     "@hl8/logger": "workspace:*",
     "@hl8/mikro-orm-nestjs": "workspace:*",
     "@hl8/multi-tenancy": "workspace:*",

@@ -1,0 +1,297 @@
+openapi: 3.1.0
+info:
+  title: HL8 Domain Core Scaffolding API
+  version: 0.1.0
+  description: >
+    内部服务接口，支持平台架构师与领域工程师基于 `@hl8/domain-core` 快速创建聚合根、值对象与领域事件骨架，
+    并保证多租户审计与事件契约的一致性。所有请求与响应字段使用中文描述，遵循平台章程。
+servers:
+  - url: https://internal.hl8.dev/api
+    description: 内部 DevOps 平台（仅限企业网络）
+tags:
+  - name: Scaffolding
+    description: 领域模型骨架生成
+  - name: Reference
+    description: 规范与基线查询
+paths:
+  /domain-core/aggregates:
+    post:
+      tags:
+        - Scaffolding
+      summary: 创建聚合根骨架
+      description: >
+        生成聚合根基类派生文件，自动注入租户断言、审计轨迹、软删除事件与领域事件队列。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AggregateScaffoldInput'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScaffoldResult'
+        '409':
+          description: 同名聚合已存在
+        '422':
+          description: 输入校验失败（例如缺少租户上下文定义）
+  /domain-core/value-objects:
+    post:
+      tags:
+        - Scaffolding
+      summary: 创建值对象骨架
+      description: 生成符合不可变性、等值比较与中文 TSDoc 规范的值对象。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValueObjectScaffoldInput'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScaffoldResult'
+        '409':
+          description: 同名值对象已存在
+        '422':
+          description: 输入校验失败
+  /domain-core/events:
+    post:
+      tags:
+        - Scaffolding
+      summary: 创建领域事件骨架
+      description: >
+        生成包含多租户上下文、审计元数据与 PastTense 命名校验的领域事件定义。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DomainEventScaffoldInput'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScaffoldResult'
+        '409':
+          description: 同名事件已存在
+        '422':
+          description: 输入校验失败
+  /domain-core/reference:
+    get:
+      tags:
+        - Reference
+      summary: 查询领域基线规范
+      description: >
+        返回最新的《platform-domain-baseline.md》与《platform-domain-design.md》摘要，帮助团队对齐建模约束。
+      parameters:
+        - in: query
+          name: section
+          required: false
+          schema:
+            type: string
+          description: 指定要检索的规范章节（如 `aggregates`, `events`, `repositories`）。
+      responses:
+        '200':
+          description: 规范摘要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceSummary'
+        '404':
+          description: 未找到指定章节
+components:
+  schemas:
+    AggregateScaffoldInput:
+      type: object
+      required:
+        - aggregateName
+        - tenantContext
+        - invariants
+      properties:
+        aggregateName:
+          type: string
+          description: 聚合根名称（帕斯卡命名，后缀省略 Aggregate）
+        tenantContext:
+          type: object
+          required:
+            - tenantId
+          properties:
+            tenantId:
+              type: boolean
+              description: 是否需要租户维度（默认为 true）
+            organizationId:
+              type: boolean
+              description: 是否包含组织维度
+            departmentId:
+              type: boolean
+              description: 是否包含部门维度
+        invariants:
+          type: array
+          items:
+            type: string
+          description: 需在 `ensureValidState` 中校验的不变式描述
+        auditTrailTemplate:
+          type: object
+          description: 审计轨迹默认配置（若省略则使用平台默认模板）
+          properties:
+            includeCreatedBy:
+              type: boolean
+              description: 是否在模板中生成 `createdBy` 字段（默认 true）
+            includeUpdatedBy:
+              type: boolean
+              description: 是否在模板中生成 `updatedBy` 字段（默认 true）
+        softDeleteStrategy:
+          type: string
+          description: 软删除策略，`enabled` 表示生成软删除值对象与恢复逻辑
+          enum: ["enabled", "disabled"]
+        emitEvents:
+          type: array
+          items:
+            type: string
+          description: 聚合需要发布的事件名称（PastTense + Event）
+        enableSoftDelete:
+          type: boolean
+          description: 是否启用软删除支持，默认 true
+        generateRepository:
+          type: boolean
+          description: 是否同步生成仓储接口样板（默认 true）
+        testingPreset:
+          type: string
+          description: 选择测试基座模板（`aggregate-harness` / `custom`）
+    ValueObjectScaffoldInput:
+      type: object
+      required:
+        - valueObjectName
+        - fields
+      properties:
+        valueObjectName:
+          type: string
+          description: 值对象名称（帕斯卡命名，需包含语义后缀，如 `TenantId`）
+        fields:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ValueObjectField'
+        immutable:
+          type: boolean
+          description: 是否生成只读属性（默认 true）
+        validationRules:
+          type: array
+          items:
+            type: string
+          description: 使用中文描述的校验规则，将映射至守卫函数
+    ValueObjectField:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          description: 字段名称（驼峰命名）
+        type:
+          type: string
+          description: 字段类型（如 `string`、`number`、`DateTimeValueObject`）
+        optional:
+          type: boolean
+          description: 是否可选
+    DomainEventScaffoldInput:
+      type: object
+      required:
+        - eventName
+        - aggregateName
+        - payloadFields
+      properties:
+        eventName:
+          type: string
+          description: 事件名称（PastTense + Event）
+        aggregateName:
+          type: string
+          description: 对应聚合名称
+        payloadFields:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/EventPayloadField'
+        requiresTriggeredBy:
+          type: boolean
+          description: 是否强制提供操作者信息
+        includeSoftDeleteSnapshot:
+          type: boolean
+          description: 是否在事件载荷中包含软删除快照，默认 true
+    EventPayloadField:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          description: 负载字段名称
+        type:
+          type: string
+          description: 字段类型
+        description:
+          type: string
+          description: 字段中文说明
+    ScaffoldResult:
+      type: object
+      required:
+        - files
+        - nextSteps
+      properties:
+        files:
+          type: array
+          description: 生成的文件相对路径
+          items:
+            type: string
+        nextSteps:
+          type: array
+          description: 建议的后续动作（如补充 TSDoc、编写测试）
+          items:
+            type: string
+        testingInstructions:
+          type: string
+          description: 引导使用 `@hl8/domain-testing` 聚合测试基座的说明链接
+    ReferenceSummary:
+      type: object
+      required:
+        - version
+        - updatedAt
+        - sections
+      properties:
+        version:
+          type: string
+          description: 规范版本号
+        updatedAt:
+          type: string
+          format: date-time
+          description: 最近更新时间
+        sections:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - title
+              - summary
+            properties:
+              id:
+                type: string
+                description: 章节标识符
+              title:
+                type: string
+                description: 章节标题
+              summary:
+                type: string
+                description: 中文摘要内容
+

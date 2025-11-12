@@ -12,6 +12,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "prepare": "husky || true",
     "libs:fix": "pnpm dlx sherif@latest --fix",
+    "libs:build": "pnpm --filter @hl8/domain-core build && pnpm --filter @hl8/domain-testing build",
+    "libs:test": "pnpm --filter @hl8/domain-core test",
     "iam:constitution-check": "node scripts/iam/constitution-check.js",
     "iam:milestone-report": "node scripts/iam/milestone-report.js",
     "governance:check": "pnpm run iam:constitution-check && pnpm run iam:milestone-report"

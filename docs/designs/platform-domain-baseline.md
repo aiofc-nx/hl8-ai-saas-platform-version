@@ -65,6 +65,8 @@ libs/domain-core/
   - 聚合根与聚合内实体的标识须通过平台 UUID 工具生成，禁止依赖数据库自增或自定义格式。
   - 软删除仅更新审计/状态，不允许直接物理删除；恢复需通过领域方法显式执行。
   - 聚合内任何引用和操作必须保持租户上下文一致，禁止跨租户引用；如需跨租户协作，应通过事件或应用层流程完成。
+  - 基类提供 `assertSameTenant` / `assertSameOrganization` / `assertSameDepartment` 守卫，聚合方法在访问跨上下文资源前必须显式调用。
+  - `touch`、`markDeleted`、`restore` 负责更新审计轨迹与软删除状态，应用层不得绕过聚合直接操作审计字段。
 
 #### 4.2 值对象
 - **ValueObjectBase**：
@@ -99,7 +101,8 @@ libs/domain-core/
 - **实现约束**：
   - 领域层只定义接口，具体实现放在 `infrastructure/repositories`。
   - 实现须处理多租户隔离（默认在基础设施层注入 CASL/CQRS 过滤，领域层保持纯净）。
-  - 仓储接口需使用平台提供的值对象，避免原始类型。
+  - 仓储查询条件 `RepositoryFindByCriteria` 必须至少包含 `tenantId`，可选 `organizationId`、`departmentId`、`ids` 与 `includeDeleted`。
+  - 仓储接口需使用平台提供的值对象，避免原始类型，并默认排除软删除记录（除非显式 `includeDeleted`）。
 
 #### 4.5 领域服务
 - 提供跨聚合的业务逻辑封装，需实现 `DomainService` 接口。
@@ -125,6 +128,7 @@ libs/domain-core/
 ### 7. 测试与质量要求
 - 聚合根、值对象需编写旁置单元测试（覆盖不变式、行为、事件触发）。
 - 提供领域层测试基座（mock 仓储、值对象工厂）。
+- `@hl8/domain-testing` 提供 `AggregateTestHarness` 等工具，聚合测试必须优先复用以减少重复样板。
 - 领域事件需编写契约测试，确保事件结构符合约定。
 - 质量门槛：核心聚合单元测试覆盖率 ≥ 95%，领域服务 ≥ 90%。
 
