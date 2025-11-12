@@ -5,6 +5,8 @@
 - 统一命令、查询、Saga、权限校验、应用层审计协调等跨领域组件，支撑租户、组织、IAM 等模块快速复用。
 - 指导业务团队在拆分后的多包体系中，如何依赖 `@hl8/application-base` 构建可扩展的应用服务。
 
+> **实现状态（2025-11-12）**：能力已落地于 `libs/core/application-base`，并通过 `pnpm --filter @hl8/application-base test` 验证命令/查询、权限与审计链路。
+
 ### 2. 核心能力域
 
 #### 2.1 命令/查询（CQRS）域

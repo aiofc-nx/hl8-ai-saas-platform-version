@@ -40,17 +40,17 @@
   "dependencies": {
     "class-transformer": "0.5.1",
     "class-validator": "0.14.2",
-    "reflect-metadata": "0.2.2"
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@jest/globals": "^30.2.0",
     "@nestjs/testing": "11.1.8",
     "@types/jest": "^30.0.0",
     "@types/node": "24.10.0",
-    "@types/supertest": "^6.0.2",
+    "@types/supertest": "^6.0.3",
     "eslint": "9.39.1",
     "jest": "^30.2.0",
-    "supertest": "^7.0.0",
+    "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
