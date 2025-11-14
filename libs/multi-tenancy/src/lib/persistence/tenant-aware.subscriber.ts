@@ -9,6 +9,8 @@ import {
 } from "@hl8/exceptions";
 import { TenantContextExecutor } from "../tenant-context.executor.js";
 
+type LoggerService = InstanceType<typeof Logger>;
+
 /**
  * @description MikroORM 订阅器：在实体持久化前自动写入租户信息
  */
@@ -21,7 +23,7 @@ export class TenantAwareSubscriber
 {
   constructor(
     private readonly tenantExecutor: TenantContextExecutor,
-    private readonly logger: Logger,
+    private readonly logger: LoggerService,
     @InjectEntityManager("postgres")
     entityManager: EntityManager,
   ) {

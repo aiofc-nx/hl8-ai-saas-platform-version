@@ -4,6 +4,8 @@ import { Logger } from "@hl8/logger";
 import { GeneralUnauthorizedException } from "@hl8/exceptions";
 import type { TenantClsStore } from "./tenant-cls-store.js";
 
+type LoggerService = InstanceType<typeof Logger>;
+
 /**
  * @description 租户上下文执行器，负责统一校验与设置 CLS 中的租户信息
  */
@@ -11,7 +13,7 @@ import type { TenantClsStore } from "./tenant-cls-store.js";
 export class TenantContextExecutor {
   constructor(
     private readonly cls: ClsService<TenantClsStore>,
-    private readonly logger: Logger,
+    private readonly logger: LoggerService,
   ) {}
 
   /**

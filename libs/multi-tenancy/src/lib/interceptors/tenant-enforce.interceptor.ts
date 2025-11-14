@@ -17,6 +17,8 @@ import {
 import type { TenantClsStore } from "../tenant-cls-store.js";
 import { TenantContextExecutor } from "../tenant-context.executor.js";
 
+type LoggerService = InstanceType<typeof Logger>;
+
 /**
  * @description Metadata Key：用于标记当前处理器可跳过租户校验
  */
@@ -36,7 +38,7 @@ export class TenantEnforceInterceptor implements NestInterceptor {
     private readonly reflector: Reflector,
     private readonly cls: ClsService<TenantClsStore>,
     private readonly tenantExecutor: TenantContextExecutor,
-    private readonly logger: Logger,
+    private readonly logger: LoggerService,
   ) {}
 
   /**

@@ -1,9 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Logger } from "@hl8/logger";
-
-type LoggerWithChild = Logger & {
-  child?: (context: Record<string, unknown>) => Logger;
-};
+import type {
+  CacheLogger,
+  CacheLoggerWithChild,
+} from "../types/logger.types.js";
 
 /**
  * @description 缓存指标事件载荷定义。
@@ -26,10 +26,10 @@ export interface CacheMetricsPayload {
  */
 @Injectable()
 export class CacheMetricsHook {
-  private readonly logger: Logger;
+  private readonly logger: CacheLogger;
 
-  constructor(logger: Logger) {
-    const childFactory = (logger as LoggerWithChild).child;
+  constructor(@Inject(Logger) logger: CacheLogger) {
+    const childFactory = (logger as CacheLoggerWithChild).child;
     this.logger =
       typeof childFactory === "function"
         ? childFactory.call(logger, { context: CacheMetricsHook.name })

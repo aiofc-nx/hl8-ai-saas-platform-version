@@ -1,9 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Logger } from "@hl8/logger";
 import {
   CacheNamespacePolicy,
   CacheNamespaceRegistry,
 } from "../config/cache-namespace.registry.js";
+import type { CacheLogger } from "../types/logger.types.js";
 
 /**
  * @description 命名空间策略响应数据结构。
@@ -21,7 +22,8 @@ export interface CacheNamespacePolicyView
 export class CacheNamespaceService {
   constructor(
     private readonly registry: CacheNamespaceRegistry,
-    private readonly logger: Logger,
+    @Inject(Logger)
+    private readonly logger: CacheLogger,
   ) {}
 
   /**

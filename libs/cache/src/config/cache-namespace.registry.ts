@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Logger } from "@hl8/logger";
 import { CacheConfig } from "./cache.config.js";
 import {
@@ -6,6 +6,7 @@ import {
   CacheNamespacePolicyConfig,
 } from "./cache-namespace-policy.config.js";
 import { DEFAULT_CACHE_KEY_SEPARATOR } from "../constants/cache-defaults.js";
+import type { CacheLogger } from "../types/logger.types.js";
 
 /**
  * @description 命名空间策略投影定义，供业务查询与序列化使用。
@@ -44,7 +45,8 @@ export class CacheNamespaceRegistry {
 
   constructor(
     private readonly cacheConfig: CacheConfig,
-    private readonly logger: Logger,
+    @Inject(Logger)
+    private readonly logger: CacheLogger,
   ) {
     this.refreshFromConfig(cacheConfig);
   }

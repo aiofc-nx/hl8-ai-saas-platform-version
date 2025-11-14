@@ -1,7 +1,7 @@
 import { NestFactory } from "@nestjs/core";
 import { NestFastifyApplication } from "@nestjs/platform-fastify";
 import type { FastifyAdapter } from "@nestjs/platform-fastify";
-import type { Logger } from "@hl8/logger";
+import { Logger } from "@hl8/logger";
 import { applyExpressCompatibilityRecommendations } from "./express-compatibility.js";
 import {
   type CreateFastifyApplicationOptions,
@@ -11,6 +11,8 @@ import {
 import { buildFastifyAdapter } from "./fastify-adapter.factory.js";
 import { callOrUndefinedIfException } from "../utils/call-or-undefined-if-exception.js";
 import { registerProcessErrorHandlers } from "../utils/process-error-handlers.js";
+
+type LoggerService = InstanceType<typeof Logger>;
 
 /**
  * @description 创建 NestFastifyApplication，并在内部完成常见的引导配置
@@ -30,7 +32,7 @@ import { registerProcessErrorHandlers } from "../utils/process-error-handlers.js
  */
 export async function createFastifyApplication<
   TConfig extends FastifyBootstrapConfig,
-  TLogger extends Logger = Logger,
+  TLogger extends LoggerService = LoggerService,
 >(
   options: CreateFastifyApplicationOptions<TConfig, TLogger>,
 ): Promise<FastifyApplicationContext<TConfig, TLogger>> {
@@ -118,9 +120,9 @@ export async function createFastifyApplication<
  * @returns Logger | undefined 当无法生成 Logger 时返回 undefined
  */
 function resolveBootstrapLogger(
-  logger: Logger | undefined,
+  logger: LoggerService | undefined,
   loggerChildContext?: Record<string, unknown>,
-): Logger | undefined {
+): LoggerService | undefined {
   if (!logger) {
     return undefined;
   }
@@ -141,9 +143,9 @@ function resolveBootstrapLogger(
  * @returns 返回类型守卫，指示 Logger 是否具备 error 方法
  */
 function isLoggerWithError(
-  logger: Logger,
-): logger is Logger & { error: (message: string) => void } {
-  return typeof (logger as Logger).error === "function";
+  logger: LoggerService,
+): logger is LoggerService & { error: (message: string) => void } {
+  return typeof (logger as LoggerService).error === "function";
 }
 
 /**
@@ -152,14 +154,14 @@ function isLoggerWithError(
  * @returns 返回类型守卫，指示 Logger 是否具备 log 方法
  */
 function isLoggerWithLog(
-  logger: Logger,
-): logger is Logger & { log: (message: string) => void } {
-  return typeof (logger as Logger).log === "function";
+  logger: LoggerService,
+): logger is LoggerService & { log: (message: string) => void } {
+  return typeof (logger as LoggerService).log === "function";
 }
 
 /**
  * @description 支持生成子 Logger 的接口定义
  */
-interface LoggerWithChild extends Logger {
-  child: (bindings: Record<string, unknown>) => Logger;
-}
+type LoggerWithChild = LoggerService & {
+  child: (bindings: Record<string, unknown>) => LoggerService;
+};

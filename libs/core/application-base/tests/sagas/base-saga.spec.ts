@@ -60,5 +60,3 @@ describe("BaseSaga", () => {
     expect(compensate).toHaveBeenCalledWith({ id: "ctx" }, error);
   });
 });
-
-

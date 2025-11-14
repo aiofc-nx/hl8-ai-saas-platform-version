@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Global, Module, type DynamicModule } from "@nestjs/common";
 import type { ClsModuleOptions } from "nestjs-cls";
+import type { IncomingMessage } from "node:http";
 import { setupClsModule } from "@hl8/async-storage";
 import { TenantContextExecutor } from "./tenant-context.executor.js";
 
@@ -20,7 +21,8 @@ export class TenantContextModule {
       middleware: {
         mount: true,
         generateId: true,
-        idGenerator: (req) => req.id?.toString() ?? randomUUID(),
+        idGenerator: (req: IncomingMessage & { id?: string | number }) =>
+          req.id?.toString() ?? randomUUID(),
       },
       ...options,
     });

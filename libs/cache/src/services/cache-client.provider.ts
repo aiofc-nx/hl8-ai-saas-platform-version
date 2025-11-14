@@ -8,17 +8,17 @@ import { REDIS_CLIENTS } from "@liaoliaots/nestjs-redis/dist/redis/redis.constan
 import type { RedisClients } from "@liaoliaots/nestjs-redis/dist/redis/interfaces/index.js";
 import type { Redis, RedisKey } from "ioredis";
 import { CacheConfig } from "../config/cache.config.js";
-
-type LoggerWithChild = Logger & {
-  child?: (context: Record<string, unknown>) => Logger;
-};
+import type {
+  CacheLogger,
+  CacheLoggerWithChild,
+} from "../types/logger.types.js";
 
 /**
  * @description 提供 Redis 客户端访问封装，统一处理命名空间与错误。
  */
 @Injectable()
 export class CacheClientProvider {
-  private readonly logger: Logger;
+  private readonly logger: CacheLogger;
   private readonly cacheConfig: CacheConfig;
   private readonly redisClients: RedisClients;
 
@@ -28,11 +28,12 @@ export class CacheClientProvider {
     redisClients: RedisClients | undefined,
     @Optional()
     cacheConfig: CacheConfig | undefined,
-    logger: Logger,
+    @Inject(Logger)
+    logger: CacheLogger,
   ) {
     this.cacheConfig = cacheConfig ?? new CacheConfig();
-    if (typeof (logger as LoggerWithChild).child === "function") {
-      this.logger = (logger as LoggerWithChild).child({
+    if (typeof (logger as CacheLoggerWithChild).child === "function") {
+      this.logger = (logger as CacheLoggerWithChild).child({
         context: CacheClientProvider.name,
       });
     } else {

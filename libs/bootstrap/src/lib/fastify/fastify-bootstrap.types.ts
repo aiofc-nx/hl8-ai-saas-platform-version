@@ -2,12 +2,14 @@ import type { Abstract, ValidationPipeOptions } from "@nestjs/common";
 import type { Type } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import type { FastifyAdapter } from "@nestjs/platform-fastify";
-import type { Logger } from "@hl8/logger";
+import { Logger as LoggerClass } from "@hl8/logger";
 import type {
   SetupSwaggerOptions,
   SwaggerConfig as SwaggerDocumentConfig,
-} from "../../../../swagger/dist/index.js";
+} from "@hl8/swagger";
 import type { BuildFastifyAdapterOptions } from "./fastify-adapter.factory.js";
+
+type LoggerService = InstanceType<typeof LoggerClass>;
 
 /**
  * @description Fastify 启动所需的基础配置模型，定义最小启动参数集合
@@ -34,7 +36,7 @@ export interface FastifyBootstrapConfig {
  */
 export interface FastifyApplicationContext<
   TConfig extends FastifyBootstrapConfig,
-  TLogger extends Logger = Logger,
+  TLogger extends LoggerService = LoggerService,
 > {
   /**
    * @description NestFastifyApplication 实例
@@ -61,7 +63,7 @@ export interface FastifyApplicationContext<
  */
 export interface CreateFastifyApplicationOptions<
   TConfig extends FastifyBootstrapConfig,
-  TLogger extends Logger = Logger,
+  TLogger extends LoggerService = LoggerService,
 > {
   /**
    * @description 应用根模块类型
@@ -150,7 +152,7 @@ export type NestProviderToken<T> =
   | Abstract<T>
   | ((...args: never[]) => T);
 
-export type { Logger };
+export type Logger = LoggerService;
 
 /**
  * @description Bootstrap 阶段 Swagger 集成配置，封装了文档配置与自定义选项

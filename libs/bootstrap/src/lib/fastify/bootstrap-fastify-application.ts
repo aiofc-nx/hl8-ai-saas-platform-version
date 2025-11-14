@@ -1,6 +1,6 @@
 import { ValidationPipe } from "@nestjs/common";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { setupSwagger } from "../../../../swagger/dist/index.js";
+import { setupSwagger } from "@hl8/swagger";
 import type { FastifyBootstrapConfig } from "./fastify-bootstrap.types.js";
 import type {
   BootstrapFastifyApplicationOptions,

@@ -10,6 +10,8 @@ import { Logger } from "@hl8/logger";
 import { GeneralForbiddenException } from "@hl8/exceptions";
 import { TenantContextExecutor } from "../tenant-context.executor.js";
 
+type LoggerService = InstanceType<typeof Logger>;
+
 /**
  * @description 租户感知仓储基类，自动在查询条件中追加 `tenantId`
  */
@@ -22,7 +24,7 @@ export abstract class BaseTenantRepository<
     protected readonly em: EntityManager,
     entityName: EntityName<ENTITY>,
     protected readonly tenantContextExecutor: TenantContextExecutor,
-    protected readonly logger: Logger,
+    protected readonly logger: LoggerService,
   ) {
     this.repository = em.getRepository(entityName);
   }
