@@ -1,6 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Logger } from "@hl8/logger";
 import { AbstractCacheKeyBuilder } from "./abstract-key.builder.js";
+import type { CacheLogger } from "../types/logger.types.js";
 
 /**
  * @description 构建租户配置缓存键的载荷。
@@ -22,7 +23,7 @@ const DEFAULT_CONFIG_KEY = "config";
  */
 @Injectable()
 export class TenantConfigKeyBuilder extends AbstractCacheKeyBuilder<TenantConfigKeyPayload> {
-  constructor(logger: Logger) {
+  constructor(@Inject(Logger) logger: CacheLogger) {
     super(logger);
   }
 

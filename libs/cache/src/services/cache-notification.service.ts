@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Logger } from "@hl8/logger";
+import type {
+  CacheLogger,
+  CacheLoggerWithChild,
+} from "../types/logger.types.js";
 
 /**
  * @description 缓存失效通知载荷，用于广播写后失效事件。
@@ -45,14 +49,10 @@ export interface CachePrefetchResult {
  */
 @Injectable()
 export class CacheNotificationService {
-  private readonly logger: Logger;
+  private readonly logger: CacheLogger;
 
-  constructor(logger: Logger) {
-    const childFactory = (
-      logger as Logger & {
-        child?: (context: Record<string, unknown>) => Logger;
-      }
-    ).child;
+  constructor(@Inject(Logger) logger: CacheLogger) {
+    const childFactory = (logger as CacheLoggerWithChild).child;
     this.logger =
       typeof childFactory === "function"
         ? childFactory.call(logger, { context: CacheNotificationService.name })

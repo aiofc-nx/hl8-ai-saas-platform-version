@@ -15,7 +15,7 @@ const createExecutionContext = (
       getResponse: () => ({}),
     }),
     getHandler: () => ({ name: handlerName }),
-  } as unknown as ExecutionContext);
+  }) as unknown as ExecutionContext;
 
 const next = (result: unknown): CallHandler => ({
   handle: () => of(result),
@@ -67,5 +67,3 @@ describe("AuditCommandInterceptor", () => {
     });
   });
 });
-
-

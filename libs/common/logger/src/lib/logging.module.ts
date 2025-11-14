@@ -58,12 +58,22 @@ export class PinoLoggingModule {
    */
   static forRoot(options?: PinoLoggerModuleOptions): DynamicModule {
     // 验证和规范化配置
-    const loggingConfig = options?.config
-      ? ConfigValidator.validate(LoggingConfig, {
-          ...new LoggingConfig(),
-          ...options.config,
-        })
-      : new LoggingConfig();
+    let loggingConfig: LoggingConfig;
+
+    if (options?.config) {
+      const validatedConfig = ConfigValidator.validate(LoggingConfig, {
+        ...new LoggingConfig(),
+        ...options.config,
+      });
+
+      if (validatedConfig instanceof LoggingConfig) {
+        loggingConfig = validatedConfig;
+      } else {
+        loggingConfig = Object.assign(new LoggingConfig(), validatedConfig);
+      }
+    } else {
+      loggingConfig = new LoggingConfig();
+    }
 
     return {
       module: PinoLoggingModule,

@@ -3,13 +3,15 @@ import {
   Catch,
   ExceptionFilter,
   HttpStatus,
+  Inject,
   Optional,
 } from "@nestjs/common";
 import { HttpAdapterHost } from "@nestjs/core";
-import { Logger as Hl8Logger } from "@hl8/logger";
+import { Logger } from "@hl8/logger";
 import { AbstractHttpException } from "../exceptions/abstract-http.exception.js";
 import { resolveRequestId } from "../utils/request-id.util.js";
 
+type LoggerServiceInstance = InstanceType<typeof Logger>;
 /**
  * @description 捕获自定义 HTTP 异常并输出统一响应
  */
@@ -22,7 +24,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
    */
   constructor(
     private readonly httpAdapterHost: HttpAdapterHost,
-    @Optional() private readonly logger?: Hl8Logger,
+    @Optional()
+    @Inject(Logger)
+    private readonly logger?: LoggerServiceInstance,
   ) {}
 
   /**

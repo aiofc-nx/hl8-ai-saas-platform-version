@@ -1,20 +1,19 @@
-import { Logger } from "@hl8/logger";
 import { GeneralBadRequestException } from "@hl8/exceptions";
-
-type LoggerWithChild = Logger & {
-  child?: (context: Record<string, unknown>) => Logger;
-};
+import type {
+  CacheLogger,
+  CacheLoggerWithChild,
+} from "../types/logger.types.js";
 
 /**
  * @description 缓存键构建器抽象基类，约束命名空间与键格式。
  */
 export abstract class AbstractCacheKeyBuilder<TPayload> {
-  private readonly logger: Logger;
+  private readonly logger: CacheLogger;
 
-  protected constructor(logger: Logger) {
+  protected constructor(logger: CacheLogger) {
     this.logger =
-      typeof (logger as LoggerWithChild).child === "function"
-        ? (logger as LoggerWithChild).child({
+      typeof (logger as CacheLoggerWithChild).child === "function"
+        ? (logger as CacheLoggerWithChild).child({
             context: AbstractCacheKeyBuilder.name,
           })
         : logger;

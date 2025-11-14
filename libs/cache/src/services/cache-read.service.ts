@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Logger } from "@hl8/logger";
 import {
   GeneralBadRequestException,
@@ -12,10 +12,10 @@ import {
   deserializeFromJson,
   serializeToJson,
 } from "../constants/cache-defaults.js";
-
-type LoggerWithOptionalChild = Logger & {
-  child?: (context: Record<string, unknown>) => Logger;
-};
+import type {
+  CacheLogger,
+  CacheLoggerWithChild,
+} from "../types/logger.types.js";
 
 /**
  * @description 缓存读取选项，描述命中策略、序列化与命名空间上下文。
@@ -44,14 +44,15 @@ export interface CacheReadOptions<T> {
  */
 @Injectable()
 export class CacheReadService {
-  private readonly logger: Logger;
+  private readonly logger: CacheLogger;
 
   constructor(
     private readonly cacheClientProvider: CacheClientProvider,
     private readonly cacheMetricsHook: CacheMetricsHook,
-    logger: Logger,
+    @Inject(Logger)
+    logger: CacheLogger,
   ) {
-    const childFactory = (logger as LoggerWithOptionalChild).child;
+    const childFactory = (logger as CacheLoggerWithChild).child;
     this.logger =
       typeof childFactory === "function"
         ? childFactory.call(logger, { context: CacheReadService.name })

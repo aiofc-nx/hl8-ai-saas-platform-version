@@ -1,16 +1,7 @@
-import nest from "../../../eslint.config.mjs";
+import libsSharedConfig from "../eslint.package.config.mjs";
 
-export default [
-  ...nest,
-  {
-    ignores: ["jest.config.ts"],
-  },
-  {
-    files: ["**/*.ts"],
-    ignores: ["**/*.spec.ts", "**/*.test.ts"],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "error",
-    },
-  },
-];
+/**
+ * libs 子包复用统一的 ESLint 配置，后续如需特化可在此处追加规则数组。
+ */
+export default [...libsSharedConfig];
 

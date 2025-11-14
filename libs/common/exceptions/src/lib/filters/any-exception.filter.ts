@@ -3,14 +3,16 @@ import {
   Catch,
   ExceptionFilter,
   HttpStatus,
+  Inject,
   Optional,
   ServiceUnavailableException,
 } from "@nestjs/common";
 import { HttpAdapterHost } from "@nestjs/core";
-import { Logger as Hl8Logger } from "@hl8/logger";
+import { Logger } from "@hl8/logger";
 import { ErrorResponse } from "../dto/error-response.dto.js";
 import { resolveRequestId } from "../utils/request-id.util.js";
 
+type LoggerServiceInstance = InstanceType<typeof Logger>;
 /**
  * @description 捕获未处理的异常，避免泄露堆栈信息
  */
@@ -23,7 +25,9 @@ export class AnyExceptionFilter implements ExceptionFilter {
    */
   constructor(
     private readonly httpAdapterHost: HttpAdapterHost,
-    @Optional() private readonly logger?: Hl8Logger,
+    @Optional()
+    @Inject(Logger)
+    private readonly logger?: LoggerServiceInstance,
   ) {}
 
   /**

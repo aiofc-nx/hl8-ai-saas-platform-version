@@ -1,4 +1,4 @@
-import { Injectable, Optional, type Type } from "@nestjs/common";
+import { Inject, Injectable, Optional, type Type } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { Logger } from "@hl8/logger";
 import {
@@ -20,6 +20,10 @@ import { RedlockService as RedlockServiceToken } from "../internal/redlock-loade
 import { RedlockService as MockRedlockService } from "../testing/redlock.mock.js";
 import { CacheNotificationService } from "./cache-notification.service.js";
 import { OptimisticLockException } from "@hl8/exceptions";
+import type {
+  CacheLogger,
+  CacheLoggerWithChild,
+} from "../types/logger.types.js";
 
 /**
  * @description 缓存失效请求载荷，封装写路径完成后的双删策略参数。
@@ -48,7 +52,7 @@ export interface CacheInvalidationCommand {
  */
 @Injectable()
 export class CacheConsistencyService {
-  private readonly logger: Logger;
+  private readonly logger: CacheLogger;
   private readonly redlockService?: Redlock;
   private readonly notificationService?: CacheNotificationService;
 
@@ -56,11 +60,12 @@ export class CacheConsistencyService {
     private readonly cacheClientProvider: CacheClientProvider,
     private readonly namespaceRegistry: CacheNamespaceRegistry,
     private readonly moduleRef: ModuleRef,
-    logger: Logger,
+    @Inject(Logger)
+    logger: CacheLogger,
     @Optional()
     notificationService?: CacheNotificationService,
   ) {
-    const childFactory = logger.child;
+    const childFactory = (logger as CacheLoggerWithChild).child;
     this.logger =
       typeof childFactory === "function"
         ? childFactory.call(logger, { context: CacheConsistencyService.name })

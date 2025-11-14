@@ -3,14 +3,16 @@ import {
   Catch,
   ExceptionFilter,
   HttpStatus,
+  Inject,
   NotFoundException,
   Optional,
 } from "@nestjs/common";
 import { HttpAdapterHost } from "@nestjs/core";
-import { Logger as Hl8Logger } from "@hl8/logger";
+import { Logger } from "@hl8/logger";
 import { ErrorResponse } from "../dto/error-response.dto.js";
 import { resolveRequestId } from "../utils/request-id.util.js";
 
+type LoggerServiceInstance = InstanceType<typeof Logger>;
 /**
  * @description 捕获 Nest 默认的 404 异常并转换为统一格式
  */
@@ -23,7 +25,9 @@ export class NotFoundExceptionFilter implements ExceptionFilter {
    */
   constructor(
     private readonly httpAdapterHost: HttpAdapterHost,
-    @Optional() private readonly logger?: Hl8Logger,
+    @Optional()
+    @Inject(Logger)
+    private readonly logger?: LoggerServiceInstance,
   ) {}
 
   /**

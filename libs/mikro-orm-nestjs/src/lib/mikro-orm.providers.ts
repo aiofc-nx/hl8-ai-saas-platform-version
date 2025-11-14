@@ -31,6 +31,8 @@ import type {
 } from "./typings.js";
 import { Logger } from "@hl8/logger";
 
+type LoggerService = InstanceType<typeof Logger>;
+
 /**
  * @description 创建 MikroORM Provider，支持自动加载实体并接入平台日志
  * @param contextName - 上下文名称，缺省时表示主上下文
@@ -53,7 +55,7 @@ export function createMikroOrmProvider(
     provide: contextName ? getMikroORMToken(contextName) : type,
     useFactory: async (
       options: MikroOrmModuleOptions | undefined,
-      logger: Logger,
+      logger: LoggerService,
     ) => {
       options = { ...options };
 
