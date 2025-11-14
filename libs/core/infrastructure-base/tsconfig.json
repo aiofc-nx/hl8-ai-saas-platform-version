@@ -6,7 +6,8 @@
     "declaration": true,
     "declarationMap": true,
     "incremental": false,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "paths": {}
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
