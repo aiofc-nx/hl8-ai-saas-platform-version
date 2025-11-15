@@ -37,7 +37,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@nestjs/common": "11.1.8",
+    "@nestjs/common": "11.1.9",
     "@nestjs/swagger": "^11.2.1",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.2"

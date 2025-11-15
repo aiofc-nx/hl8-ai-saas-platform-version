@@ -5,7 +5,6 @@ import {
 import { Logger } from "@hl8/logger";
 import { AppModule } from "./app.module.js";
 import { AppConfig } from "./config/app.config.js";
-import { TenantEnforceInterceptor } from "@hl8/multi-tenancy";
 
 /**
  * @description 应用启动入口：创建应用、初始化 Swagger 并执行引导流程
@@ -33,8 +32,6 @@ const main = async (): Promise<void> => {
     console.log("[Main] 配置 Swagger API 文档...");
 
     console.log("[Main] 启动应用...");
-    const tenantInterceptor = app.get(TenantEnforceInterceptor);
-    app.useGlobalInterceptors(tenantInterceptor);
     await bootstrapFastifyApplication(app, {
       config,
       swagger: {

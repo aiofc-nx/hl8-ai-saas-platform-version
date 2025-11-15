@@ -25,6 +25,7 @@
     "paths": {
       "@hl8/domain-base": ["libs/core/domain-base/src/index.ts"],
       "@hl8/application": ["libs/core/application-base/src/index.ts"],
+      "@hl8/infrastructure-base": ["libs/core/infrastructure-base/src/index.ts"],
       "@hl8/multi-tenancy": ["libs/multi-tenancy/src/index.ts"],
       "@hl8/logger": ["libs/common/logger/src/index.ts"],
       "@hl8/exceptions": ["libs/common/exceptions/src/index.ts"],
@@ -33,7 +34,8 @@
       "@hl8/bootstrap": ["libs/bootstrap/src/index.ts"],
       "@hl8/mikro-orm-nestjs": ["libs/mikro-orm-nestjs/src/index.ts"],
       "@hl8/async-storage": ["libs/async-storage/src/index.ts"],
-      "@hl8/swagger": ["libs/common/swagger/src/index.ts"]
+      "@hl8/swagger": ["libs/common/swagger/src/index.ts"],
+      "@hl8/tenant":["libs/modules/tenant/src/index.ts"]
     }
   }
 }

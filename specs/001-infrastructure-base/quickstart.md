@@ -34,8 +34,8 @@ pnpm add @hl8/infrastructure-base-memory
 在 `app.module.ts` 中导入 `InfrastructureCoreModule`：
 
 ```typescript
-import { InfrastructureCoreModule } from '@hl8/infrastructure-base';
-import { Module } from '@nestjs/common';
+import { InfrastructureCoreModule } from "@hl8/infrastructure-base";
+import { Module } from "@nestjs/common";
 
 @Module({
   imports: [
@@ -46,22 +46,22 @@ import { Module } from '@nestjs/common';
         isGlobal: true,
         config: {
           eventStore: {
-            connectionString: process.env.EVENT_STORE_CONNECTION_STRING || 'postgresql://localhost:5432/eventstore',
+            connectionString: process.env.EVENT_STORE_CONNECTION_STRING || "postgresql://localhost:5432/eventstore",
             optimisticLockRetryCount: 3,
             optimisticLockRetryDelay: 100,
           },
           eventPublisher: {
-            messageBrokerType: 'kafka',
-            messageBrokerConnectionString: process.env.KAFKA_CONNECTION_STRING || 'kafka://localhost:9092',
+            messageBrokerType: "kafka",
+            messageBrokerConnectionString: process.env.KAFKA_CONNECTION_STRING || "kafka://localhost:9092",
             enableMessageBrokerDegradation: true,
           },
           abilityCache: {
-            cacheConnectionString: process.env.REDIS_CONNECTION_STRING || 'redis://localhost:6379',
+            cacheConnectionString: process.env.REDIS_CONNECTION_STRING || "redis://localhost:6379",
             ttlSeconds: 3600,
             enableCacheDegradation: true,
           },
           auditService: {
-            connectionString: process.env.AUDIT_CONNECTION_STRING || 'postgresql://localhost:5432/audit',
+            connectionString: process.env.AUDIT_CONNECTION_STRING || "postgresql://localhost:5432/audit",
             enableArchiving: false,
           },
         },
@@ -69,7 +69,7 @@ import { Module } from '@nestjs/common';
       // 事件存储模块选项（可选）
       eventStore: {
         isGlobal: false,
-        contextName: 'eventstore', // 用于多数据源场景
+        contextName: "eventstore", // 用于多数据源场景
       },
       // 事件发布模块选项（可选）
       eventPublisher: {
@@ -82,7 +82,7 @@ import { Module } from '@nestjs/common';
       // 审计服务模块选项（可选）
       auditService: {
         isGlobal: false,
-        contextName: 'audit', // 用于多数据源场景
+        contextName: "audit", // 用于多数据源场景
       },
       // 异常服务模块选项（可选，默认启用）
       exceptionService: {
@@ -122,14 +122,14 @@ NODE_ENV=development
 ### 1. 事件存储使用
 
 ```typescript
-import { EventStore, StoredEvent } from '@hl8/infrastructure-base';
-import { Injectable, Inject } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { EventStore, StoredEvent } from "@hl8/infrastructure-base";
+import { Injectable, Inject } from "@nestjs/common";
+import { randomUUID } from "crypto";
 
 @Injectable()
 export class UserService {
   constructor(
-    @Inject('EventStore')
+    @Inject("EventStore")
     private readonly eventStore: EventStore,
   ) {}
 
@@ -142,7 +142,7 @@ export class UserService {
         tenantId,
         version: 1,
         payload: {
-          type: 'UserCreated',
+          type: "UserCreated",
           data: userData,
         },
         occurredAt: new Date(),
@@ -179,13 +179,13 @@ export class UserService {
 ### 2. 事件发布使用
 
 ```typescript
-import { EventPublisher, StoredEvent } from '@hl8/infrastructure-base';
-import { Injectable, Inject } from '@nestjs/common';
+import { EventPublisher, StoredEvent } from "@hl8/infrastructure-base";
+import { Injectable, Inject } from "@nestjs/common";
 
 @Injectable()
 export class UserEventHandler {
   constructor(
-    @Inject('EventPublisher')
+    @Inject("EventPublisher")
     private readonly eventPublisher: EventPublisher,
   ) {}
 
@@ -199,22 +199,17 @@ export class UserEventHandler {
 ### 3. 权限能力使用
 
 ```typescript
-import { CaslAbilityService, SecurityContext } from '@hl8/infrastructure-base';
-import { Injectable, Inject } from '@nestjs/common';
+import { CaslAbilityService, SecurityContext } from "@hl8/infrastructure-base";
+import { Injectable, Inject } from "@nestjs/common";
 
 @Injectable()
 export class PermissionService {
   constructor(
-    @Inject('CaslAbilityService')
+    @Inject("CaslAbilityService")
     private readonly caslAbilityService: CaslAbilityService,
   ) {}
 
-  async checkPermission(
-    userId: string,
-    tenantId: string,
-    action: string,
-    resource: string,
-  ) {
+  async checkPermission(userId: string, tenantId: string, action: string, resource: string) {
     // 构建安全上下文
     const context: SecurityContext = {
       userId,
@@ -234,23 +229,18 @@ export class PermissionService {
 ### 4. 审计服务使用
 
 ```typescript
-import { AuditService, AuditRecord, AuditQuery } from '@hl8/infrastructure-base';
-import { Injectable, Inject } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { AuditService, AuditRecord, AuditQuery } from "@hl8/infrastructure-base";
+import { Injectable, Inject } from "@nestjs/common";
+import { randomUUID } from "crypto";
 
 @Injectable()
 export class AuditLogService {
   constructor(
-    @Inject('AuditService')
+    @Inject("AuditService")
     private readonly auditService: AuditService,
   ) {}
 
-  async logAction(
-    tenantId: string,
-    userId: string,
-    action: string,
-    payload: unknown,
-  ) {
+  async logAction(tenantId: string, userId: string, action: string, payload: unknown) {
     // 构建审计记录
     const record: AuditRecord = {
       auditId: randomUUID(),
@@ -286,27 +276,24 @@ export class AuditLogService {
 ### 5. 配置服务使用
 
 ```typescript
-import { ConfigurationService } from '@hl8/infrastructure-base';
-import { Injectable, Inject } from '@nestjs/common';
+import { ConfigurationService } from "@hl8/infrastructure-base";
+import { Injectable, Inject } from "@nestjs/common";
 
 @Injectable()
 export class ConfigService {
   constructor(
-    @Inject('ConfigurationService')
+    @Inject("ConfigurationService")
     private readonly configurationService: ConfigurationService,
   ) {}
 
   getEventStoreConnectionString() {
     // 获取配置值
-    return this.configurationService.get<string>(
-      'eventStore.connectionString',
-      'postgresql://localhost:5432/eventstore',
-    );
+    return this.configurationService.get<string>("eventStore.connectionString", "postgresql://localhost:5432/eventstore");
   }
 
   hasEventStore() {
     // 检查配置是否存在
-    return this.configurationService.has('eventStore');
+    return this.configurationService.has("eventStore");
   }
 }
 ```
@@ -314,21 +301,21 @@ export class ConfigService {
 ### 6. 异常服务使用
 
 ```typescript
-import { ExceptionService, ExceptionInfo } from '@hl8/infrastructure-base';
-import { Injectable, Inject } from '@nestjs/common';
+import { ExceptionService, ExceptionInfo } from "@hl8/infrastructure-base";
+import { Injectable, Inject } from "@nestjs/common";
 
 @Injectable()
 export class ErrorService {
   constructor(
-    @Inject('ExceptionService')
+    @Inject("ExceptionService")
     private readonly exceptionService: ExceptionService,
   ) {}
 
   async handleError(error: Error) {
     // 创建异常信息
     const exception: ExceptionInfo = {
-      errorCode: 'ERROR_CODE',
-      message: '错误信息（中文）',
+      errorCode: "ERROR_CODE",
+      message: "错误信息（中文）",
       context: {
         error: error.message,
         stack: error.stack,
@@ -350,11 +337,11 @@ export class ErrorService {
 ### 1. 单元测试
 
 ```typescript
-import { Test } from '@nestjs/testing';
-import { EventStore, InMemoryEventStore } from '@hl8/infrastructure-base';
-import { UserService } from './user.service';
+import { Test } from "@nestjs/testing";
+import { EventStore, InMemoryEventStore } from "@hl8/infrastructure-base";
+import { UserService } from "./user.service";
 
-describe('UserService', () => {
+describe("UserService", () => {
   let userService: UserService;
   let eventStore: EventStore;
 
@@ -363,23 +350,23 @@ describe('UserService', () => {
       providers: [
         UserService,
         {
-          provide: 'EventStore',
+          provide: "EventStore",
           useClass: InMemoryEventStore, // 使用内存事件存储（测试替身）
         },
       ],
     }).compile();
 
     userService = module.get<UserService>(UserService);
-    eventStore = module.get<EventStore>('EventStore');
+    eventStore = module.get<EventStore>("EventStore");
   });
 
-  it('should create user', async () => {
-    const events = await userService.createUser('user-1', 'tenant-1', {
-      name: 'John Doe',
+  it("should create user", async () => {
+    const events = await userService.createUser("user-1", "tenant-1", {
+      name: "John Doe",
     });
 
     expect(events).toHaveLength(1);
-    expect((events[0].payload as { type: string }).type).toBe('UserCreated');
+    expect((events[0].payload as { type: string }).type).toBe("UserCreated");
   });
 });
 ```
@@ -387,11 +374,11 @@ describe('UserService', () => {
 ### 2. 集成测试
 
 ```typescript
-import { Test } from '@nestjs/testing';
-import { InfrastructureCoreModule, EventStore } from '@hl8/infrastructure-base';
-import { UserService } from './user.service';
+import { Test } from "@nestjs/testing";
+import { InfrastructureCoreModule, EventStore } from "@hl8/infrastructure-base";
+import { UserService } from "./user.service";
 
-describe('UserService Integration', () => {
+describe("UserService Integration", () => {
   let userService: UserService;
   let eventStore: EventStore;
 
@@ -405,13 +392,13 @@ describe('UserService Integration', () => {
             isGlobal: false,
             config: {
               eventStore: {
-                connectionString: process.env.TEST_EVENT_STORE_CONNECTION_STRING || 'postgresql://localhost:5432/test_eventstore',
+                connectionString: process.env.TEST_EVENT_STORE_CONNECTION_STRING || "postgresql://localhost:5432/test_eventstore",
               },
             },
           },
           eventStore: {
             isGlobal: false,
-            contextName: 'test_eventstore',
+            contextName: "test_eventstore",
           },
         }),
       ],
@@ -419,18 +406,18 @@ describe('UserService Integration', () => {
     }).compile();
 
     userService = module.get<UserService>(UserService);
-    eventStore = module.get<EventStore>('EventStore');
+    eventStore = module.get<EventStore>("EventStore");
   });
 
-  it('should create user and load events', async () => {
-    const events = await userService.createUser('user-1', 'tenant-1', {
-      name: 'John Doe',
+  it("should create user and load events", async () => {
+    const events = await userService.createUser("user-1", "tenant-1", {
+      name: "John Doe",
     });
 
-    const loadedEvents = await eventStore.load('user-1', 'tenant-1');
+    const loadedEvents = await eventStore.load("user-1", "tenant-1");
 
     expect(loadedEvents).toHaveLength(1);
-    expect((loadedEvents[0].payload as { type: string }).type).toBe('UserCreated');
+    expect((loadedEvents[0].payload as { type: string }).type).toBe("UserCreated");
   });
 });
 ```
@@ -460,8 +447,8 @@ pnpm mikro-orm migration:down
 ### 1. 性能监控
 
 ```typescript
-import { EventStore } from '@hl8/infrastructure-base';
-import { Injectable } from '@nestjs/common';
+import { EventStore } from "@hl8/infrastructure-base";
+import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class MonitoringService {
@@ -482,21 +469,17 @@ export class MonitoringService {
 ### 2. 健康检查
 
 ```typescript
-import { HealthCheckService, HealthCheck } from '@nestjs/terminus';
-import { Injectable } from '@nestjs/common';
+import { HealthCheckService, HealthCheck } from "@nestjs/terminus";
+import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class HealthController {
   constructor(private readonly health: HealthCheckService) {}
 
-  @Get('health')
+  @Get("health")
   @HealthCheck()
   check() {
-    return this.health.check([
-      () => this.eventStore.healthCheck(),
-      () => this.auditService.healthCheck(),
-      () => this.caslAbilityService.healthCheck(),
-    ]);
+    return this.health.check([() => this.eventStore.healthCheck(), () => this.auditService.healthCheck(), () => this.caslAbilityService.healthCheck()]);
   }
 }
 ```
@@ -508,6 +491,7 @@ export class HealthController {
 **问题**：事件存储服务不可用
 
 **解决方案**：
+
 - 检查数据库连接配置
 - 检查数据库服务状态
 - 检查网络连接
@@ -518,6 +502,7 @@ export class HealthController {
 **问题**：权限缓存服务不可用
 
 **解决方案**：
+
 - 检查 Redis 连接配置
 - 检查 Redis 服务状态
 - 系统会自动降级到直接查询，不影响功能
@@ -527,6 +512,7 @@ export class HealthController {
 **问题**：消息队列服务不可用
 
 **解决方案**：
+
 - 检查 Kafka 连接配置
 - 检查 Kafka 服务状态
 - 系统会自动降级处理，仅记录日志而不阻塞主流程
@@ -570,4 +556,3 @@ export class HealthController {
 - [数据模型](./data-model.md)
 - [API 合约](./contracts/interfaces.md)
 - [技术研究](./research.md)
-

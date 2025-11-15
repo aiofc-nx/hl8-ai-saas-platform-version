@@ -48,14 +48,10 @@
 
 import { Type } from "class-transformer";
 import {
-  IsBoolean,
   IsIn,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  Max,
-  Min,
   ValidateNested,
 } from "class-validator";
 
@@ -65,198 +61,6 @@ import {
   SwaggerConfig as BaseSwaggerConfig,
   SwaggerServer,
 } from "@hl8/swagger";
-
-/**
- * @description 数据库连接配置，统一管理 PostgreSQL 数据源参数
- */
-export class DatabaseEntitiesConfig {
-  /**
-   * @description 已编译实体文件的通配符路径
-   */
-  @IsString()
-  @IsOptional()
-  public readonly glob: string = "./dist/entities/**/*.js";
-
-  /**
-   * @description TypeScript 实体文件的通配符路径
-   */
-  @IsString()
-  @IsOptional()
-  public readonly tsGlob: string = "./src/entities/**/*.ts";
-}
-
-/**
- * @description 数据库迁移配置
- */
-export class DatabaseMigrationsConfig {
-  /**
-   * @description 迁移文件表名
-   */
-  @IsString()
-  @IsOptional()
-  public readonly tableName: string = "mikro_orm_migrations";
-
-  /**
-   * @description 已编译迁移文件路径
-   */
-  @IsString()
-  @IsOptional()
-  public readonly path: string = "./dist/database/migrations";
-
-  /**
-   * @description TypeScript 迁移文件路径
-   */
-  @IsString()
-  @IsOptional()
-  public readonly pathTs: string = "./src/database/migrations";
-
-  /**
-   * @description 迁移文件的匹配模式
-   */
-  @IsString()
-  @IsOptional()
-  public readonly glob: string = "!(*.d).{js,ts}";
-}
-
-/**
- * @description 数据库种子数据配置
- */
-export class DatabaseSeederConfig {
-  /**
-   * @description 编译后的种子数据路径
-   */
-  @IsString()
-  @IsOptional()
-  public readonly path: string = "./dist/database/seeders";
-
-  /**
-   * @description TypeScript 种子数据路径
-   */
-  @IsString()
-  @IsOptional()
-  public readonly pathTs: string = "./src/database/seeders";
-
-  /**
-   * @description 种子文件匹配模式
-   */
-  @IsString()
-  @IsOptional()
-  public readonly glob: string = "!(*.d).{js,ts}";
-
-  /**
-   * @description 默认的种子数据类
-   */
-  @IsString()
-  @IsOptional()
-  public readonly defaultSeeder: string = "DatabaseSeeder";
-
-  /**
-   * @description 种子文件的输出格式
-   */
-  @IsString()
-  @IsOptional()
-  public readonly emit: "ts" | "js" = "ts";
-
-  /**
-   * @description 自定义种子文件命名规则
-   */
-  @IsString()
-  @IsOptional()
-  public readonly fileNamePattern: string = "[name].seeder";
-}
-
-/**
- * @description 数据库连接配置，统一管理 PostgreSQL 数据源参数
- */
-export class DatabaseConfig {
-  /**
-   * @description 数据库主机地址
-   */
-  @IsString()
-  @IsNotEmpty()
-  public readonly host: string = "postgres";
-
-  /**
-   * @description 数据库监听端口
-   */
-  @IsNumber()
-  @Type(() => Number)
-  @Min(1)
-  @Max(65535)
-  public readonly port: number = 5432;
-
-  /**
-   * @description 数据库用户名
-   */
-  @IsString()
-  @IsNotEmpty()
-  public readonly user: string = "aiofix";
-
-  /**
-   * @description 数据库密码
-   */
-  @IsString()
-  @IsOptional()
-  public readonly password: string = "aiofix";
-
-  /**
-   * @description 数据库名称
-   */
-  @IsString()
-  @IsNotEmpty()
-  public readonly dbName: string = "hl8-platform";
-
-  /**
-   * @description 默认 Schema 名称
-   */
-  @IsString()
-  @IsOptional()
-  public readonly schema: string = "public";
-
-  /**
-   * @description 是否开启 MikroORM 调试日志
-   */
-  @IsBoolean()
-  @IsOptional()
-  public readonly debug?: boolean = false;
-
-  /**
-   * @description 是否自动注册请求上下文中间件
-   */
-  @IsBoolean()
-  @IsOptional()
-  public readonly registerRequestContext?: boolean = true;
-
-  /**
-   * @description 是否自动加载实体以构建仓储
-   */
-  @IsBoolean()
-  @IsOptional()
-  public readonly autoLoadEntities?: boolean = true;
-
-  /**
-   * @description 实体的通配符配置
-   */
-  @ValidateNested()
-  @Type(() => DatabaseEntitiesConfig)
-  public readonly entities: DatabaseEntitiesConfig =
-    new DatabaseEntitiesConfig();
-
-  /**
-   * @description 迁移配置
-   */
-  @ValidateNested()
-  @Type(() => DatabaseMigrationsConfig)
-  public readonly migrations: DatabaseMigrationsConfig =
-    new DatabaseMigrationsConfig();
-
-  /**
-   * @description 种子数据配置
-   */
-  @ValidateNested()
-  @Type(() => DatabaseSeederConfig)
-  public readonly seeder: DatabaseSeederConfig = new DatabaseSeederConfig();
-}
 
 /**
  * Swagger 配置
@@ -403,11 +207,4 @@ export class AppConfig {
   @Type(() => SwaggerConfig)
   @IsOptional()
   public readonly swagger: SwaggerConfig = new SwaggerConfig();
-
-  /**
-   * @description PostgreSQL 数据库配置
-   */
-  @ValidateNested()
-  @Type(() => DatabaseConfig)
-  public readonly database: DatabaseConfig = new DatabaseConfig();
 }

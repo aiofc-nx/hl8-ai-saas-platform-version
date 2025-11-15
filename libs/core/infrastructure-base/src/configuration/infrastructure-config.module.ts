@@ -153,10 +153,6 @@ export class InfrastructureConfigModule {
       validationOptions: {
         whitelist: true, // 只允许已定义的属性
         forbidNonWhitelisted: true, // 禁止未定义的属性
-        transform: true, // 启用类型转换
-        transformOptions: {
-          enableImplicitConversion: true, // 启用隐式类型转换
-        },
       },
     });
 

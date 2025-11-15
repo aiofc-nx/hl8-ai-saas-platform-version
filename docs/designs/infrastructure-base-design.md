@@ -3,11 +3,13 @@
 > 关联基线：`docs/designs/infrastructure-base-baseline.md`
 
 ### 1. 背景与目标
+
 - 为 `@hl8/infrastructure-base` 提供事件溯源、事件驱动、权限缓存、审计、配置、日志等能力的详细设计。
 - 描述目录组织、接口契约、关键流程与监控指标，为应用层与业务模块提供稳定的基础设施。
 - 明确扩展点与运维要求，支撑平台级多租户 SaaS 能力。
 
 ### 2. 架构视图
+
 ```
 ┌────────────────────────────────────────┐
 │ Infrastructure Core                    │
@@ -29,6 +31,7 @@
 ```
 
 ### 3. 目录结构
+
 ```
 libs/infrastructure-base/
 ├── audit/
@@ -68,6 +71,7 @@ libs/infrastructure-base/
 ### 4. 核心组件设计
 
 #### 4.1 事件存储
+
 ```typescript
 export interface StoredEvent {
   readonly eventId: string;
@@ -91,6 +95,7 @@ export interface EventStore {
 - `mikro-orm-event-store.ts` 负责映射到 PostgreSQL，表结构需包含 `tenant_id`、`version` 索引。
 
 #### 4.2 事件发布与投影
+
 ```typescript
 export class EventPublisher {
   public constructor(
@@ -112,6 +117,7 @@ export class EventPublisher {
 - 投影层通过 `@ProjectionHandler` 装饰器注册，默认使用 MikroORM 写入读模型。
 
 #### 4.3 CASL 能力服务
+
 ```typescript
 export class CaslAbilityService {
   public constructor(
@@ -137,6 +143,7 @@ export class CaslAbilityService {
 - 触发刷新时需通过消息通知应用层 (`AbilityRefreshedEvent`)。
 
 #### 4.4 审计服务
+
 ```typescript
 export interface AuditRecord {
   readonly tenantId: TenantId;
@@ -159,13 +166,13 @@ export class AuditService {
 - 审计存储失败需记录告警，支持重试队列。
 
 #### 4.5 配置模块
+
 ```typescript
 @Module({
   providers: [
     {
       provide: InfrastructureConfigToken,
-      useFactory: () =>
-        ConfigFactory.create(InfraConfigSchema, process.env),
+      useFactory: () => ConfigFactory.create(InfraConfigSchema, process.env),
     },
   ],
   exports: [InfrastructureConfigToken],
@@ -178,20 +185,21 @@ export class InfrastructureConfigModule {}
 
 ### 5. 流程设计
 
-1. **命令执行后发布事件**  
-   - 应用层保存聚合，调用 `EventStore.append`。  
-   - `EventPublisher.publish` 将事件投递到 EventBus 与消息队列。  
+1. **命令执行后发布事件**
+   - 应用层保存聚合，调用 `EventStore.append`。
+   - `EventPublisher.publish` 将事件投递到 EventBus 与消息队列。
    - 投影监听事件更新读模型，权限变更事件触发 `CaslAbilityService` 刷新缓存。
 
-2. **权限缓存预热**  
-   - 权限变更投影完成后发送 `AbilityCacheInvalidatedEvent`。  
+2. **权限缓存预热**
+   - 权限变更投影完成后发送 `AbilityCacheInvalidatedEvent`。
    - `AbilityCacheService` 根据租户/用户维度清理缓存，并触发预热任务。
 
-3. **审计记录**  
-   - 应用层审计协调器调用 `AuditService.append`。  
+3. **审计记录**
+   - 应用层审计协调器调用 `AuditService.append`。
    - 审计写入数据库，失败时写入重试队列并告警。
 
 ### 6. 测试与监控
+
 - 提供内存版事件存储、缓存、消息适配器，用于单元测试。
 - 集成测试需覆盖：
   - 事件写入→读取→发布链路。
@@ -200,18 +208,20 @@ export class InfrastructureConfigModule {}
 - 监控指标通过 Prometheus/OpenTelemetry 采集，包含事件吞吐、缓存命中率、审计失败率等。
 
 ### 7. 运维策略
+
 - 发布前执行数据库迁移（事件表、审计表、缓存表）。
 - 配置在 `InfrastructureConfigModule` 注册，需通过配置中心或环境变量加载。
 - 建立告警策略：事件处理延迟、死信堆积、缓存命中率低。
 
 ### 8. 扩展点
+
 - **EventStore**：可扩展至 DynamoDB/云原生事件存储，实现需满足接口契约。
 - **MessageBrokerAdapter**：支持 Kafka、RabbitMQ、RocketMQ、自研总线。
 - **AbilityCacheService**：可接入多级缓存、分布式缓存集群。
 - **AuditRepository**：支持 PostgreSQL、MongoDB、Elasticsearch。
 
 ### 9. 版本管理
+
 - 所有接口变更需在 `CHANGELOG.md` 记录，并发布迁移指南。
 - 使用语义化版本管理，应用层在升级前需评估兼容性。
 - 重大升级需同步更新 `docs/designs/application-base-design.md`，确保依赖关系清晰。
-

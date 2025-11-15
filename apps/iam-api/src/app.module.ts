@@ -1,11 +1,7 @@
 import { PinoLoggingModule } from "@hl8/logger";
 import { TypedConfigModule, dotenvLoader, directoryLoader } from "@hl8/config";
 import { Module } from "@nestjs/common";
-import { APP_INTERCEPTOR } from "@nestjs/core";
-import {
-  TenantContextModule,
-  TenantEnforceInterceptor,
-} from "@hl8/multi-tenancy";
+
 import * as path from "path";
 import { AppController } from "./app.controller.js";
 import { AppConfig } from "./config/app.config.js";
@@ -71,19 +67,9 @@ import { AppConfig } from "./config/app.config.js";
         },
       },
     }),
-    TenantContextModule.register(),
     // TODO: 接入租户配置、缓存、用户、认证等业务模块（待实现）
   ],
   controllers: [AppController],
-  providers: [
-    /**
-     * @description 多租户强制拦截器 - 单例注册，供全局拦截链与其他模块复用
-     */
-    TenantEnforceInterceptor,
-    {
-      provide: APP_INTERCEPTOR,
-      useExisting: TenantEnforceInterceptor,
-    },
-  ],
+  providers: [],
 })
 export class AppModule {}
