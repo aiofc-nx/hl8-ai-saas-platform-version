@@ -1,0 +1,643 @@
+openapi: 3.0.3
+info:
+  title: 租户管理 API
+  description: |
+    租户管理模块的 REST API 接口规范。
+    
+    本 API 提供租户的创建、启用、停用、归档和查询功能，支持多租户数据隔离和权限验证。
+    
+    **权限要求**：
+    - 所有操作需要超级管理员（SUPER_ADMIN）或平台管理员（ADMIN）权限
+    - IAM 系统查询租户上下文接口需要系统级访问权限
+    
+    **多租户隔离**：
+    - 所有请求自动携带租户上下文（通过 Header 或 Token）
+    - 查询结果自动过滤，仅返回当前租户的数据
+    
+    **事件驱动**：
+    - 租户生命周期操作会发布领域事件
+    - 事件发布失败不影响操作成功，采用最终一致性策略
+  version: 1.0.0
+  contact:
+    name: HL8 Platform Team
+
+servers:
+  - url: https://api.hl8.com/v1
+    description: 生产环境
+  - url: https://staging-api.hl8.com/v1
+    description: 预发布环境
+  - url: http://localhost:3000/v1
+    description: 本地开发环境
+
+tags:
+  - name: 租户命令
+    description: 租户生命周期管理命令接口
+  - name: 租户查询
+    description: 租户信息查询接口
+  - name: 租户上下文
+    description: IAM 系统查询租户上下文接口
+
+paths:
+  /tenants:
+    post:
+      tags:
+        - 租户命令
+      summary: 创建租户
+      description: |
+        创建新的租户账户。
+        
+        **权限要求**：超级管理员或平台管理员
+        
+        **流程**：
+        1. 校验租户名称唯一性
+        2. 校验输入参数（名称、联系人信息、组织上下文）
+        3. 创建租户聚合根，状态为"已初始化"
+        4. 发布 TenantCreatedEvent 事件
+        5. 初始化租户上下文（默认组织根节点、默认时区等）
+      operationId: createTenant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        '201':
+          description: 租户创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 租户名称已存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - 租户查询
+      summary: 查询租户列表
+      description: |
+        分页查询租户列表，支持按状态、创建时间、关键字过滤。
+        
+        **权限要求**：超级管理员或平台管理员
+        
+        **默认行为**：
+        - 默认排除已归档（软删除）的租户
+        - 默认按创建时间倒序排列
+        - 支持分页查询
+      operationId: listTenants
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: 租户状态过滤（Initialized, Active, Suspended, Archived）
+          schema:
+            type: string
+            enum: [Initialized, Active, Suspended, Archived]
+        - name: keyword
+          in: query
+          description: 关键字搜索（租户名称）
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: 页码（从1开始）
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: pageSize
+          in: query
+          description: 每页数量
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: includeDeleted
+          in: query
+          description: 是否包含已删除记录
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantListResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tenants/{tenantId}:
+    get:
+      tags:
+        - 租户查询
+      summary: 查询单个租户
+      description: |
+        根据租户ID查询租户详细信息。
+        
+        **权限要求**：超级管理员或平台管理员
+      operationId: getTenantById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          description: 租户ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        '404':
+          description: 租户不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - 租户命令
+      summary: 更新租户档案
+      description: |
+        更新租户的扩展信息（法定名称、注册代码、行业分类等）。
+        
+        **权限要求**：超级管理员或平台管理员
+      operationId: updateTenantProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          description: 租户ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantProfileRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        '404':
+          description: 租户不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tenants/{tenantId}/activate:
+    post:
+      tags:
+        - 租户命令
+      summary: 启用租户
+      description: |
+        启用租户，将状态从"已初始化"或"已暂停"转换为"已激活"。
+        
+        **权限要求**：超级管理员或平台管理员
+        
+        **流程**：
+        1. 校验租户状态允许激活
+        2. 更新租户状态为"已激活"
+        3. 发布 TenantActivatedEvent 事件
+        4. IAM 系统接收事件后启用权限
+      operationId: activateTenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          description: 租户ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 启用成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        '400':
+          description: 状态不允许激活
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 租户不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tenants/{tenantId}/deactivate:
+    post:
+      tags:
+        - 租户命令
+      summary: 停用租户
+      description: |
+        停用租户，将状态从"已激活"转换为"已暂停"。
+        
+        **权限要求**：超级管理员或平台管理员
+        
+        **流程**：
+        1. 校验租户状态为"已激活"
+        2. 更新租户状态为"已暂停"
+        3. 发布 TenantSuspendedEvent 事件
+        4. IAM 系统接收事件后禁用权限
+      operationId: deactivateTenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          description: 租户ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 停用成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        '400':
+          description: 状态不允许停用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 租户不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tenants/{tenantId}/archive:
+    post:
+      tags:
+        - 租户命令
+      summary: 归档租户
+      description: |
+        归档租户（软删除），将租户标记为已归档状态。
+        
+        **权限要求**：超级管理员或平台管理员
+        
+        **流程**：
+        1. 校验租户状态允许归档
+        2. 标记租户为软删除状态
+        3. 发布 TenantArchivedEvent 事件
+        4. 计费系统接收事件后停止计费
+      operationId: archiveTenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          description: 租户ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 归档成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        '400':
+          description: 状态不允许归档
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 租户不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tenants/{tenantId}/context:
+    get:
+      tags:
+        - 租户上下文
+      summary: 查询租户上下文
+      description: |
+        IAM 系统查询租户的上下文信息（默认组织ID、默认时区、货币等）。
+        
+        **权限要求**：系统级访问权限（IAM 系统）
+        
+        **用途**：用于权限验证和策略应用时使用正确的租户上下文
+      operationId: getTenantContext
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          description: 租户ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantContextResponse'
+        '404':
+          description: 租户不存在或已归档
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT 令牌认证
+
+  schemas:
+    CreateTenantRequest:
+      type: object
+      required:
+        - tenantName
+        - contactInfo
+        - context
+      properties:
+        tenantName:
+          type: string
+          description: 租户名称（1-100字符，允许中文、英文、数字、连字符、下划线）
+          minLength: 1
+          maxLength: 100
+          example: "ABC公司"
+        contactInfo:
+          $ref: '#/components/schemas/ContactInfo'
+        context:
+          $ref: '#/components/schemas/TenantContext'
+        profile:
+          $ref: '#/components/schemas/TenantProfile'
+
+    UpdateTenantProfileRequest:
+      type: object
+      properties:
+        legalName:
+          type: string
+          description: 法定名称
+          example: "ABC科技有限公司"
+        registrationCode:
+          type: string
+          description: 注册代码
+          example: "91110000MA01234567"
+        industry:
+          type: string
+          description: 行业分类
+          example: "信息技术服务"
+
+    ContactInfo:
+      type: object
+      required:
+        - contactName
+        - email
+      properties:
+        contactName:
+          type: string
+          description: 负责人姓名
+          example: "张三"
+        email:
+          type: string
+          format: email
+          description: 邮箱（必填，需符合标准邮箱格式）
+          example: "zhangsan@example.com"
+        phone:
+          type: string
+          description: 电话（可选，需支持国际格式 +国家代码）
+          example: "+86-13800138000"
+          pattern: '^\+[1-9]\d{1,14}$'
+
+    TenantContext:
+      type: object
+      required:
+        - defaultOrganizationId
+        - defaultTimezone
+      properties:
+        defaultOrganizationId:
+          type: string
+          format: uuid
+          description: 默认组织根节点（必填）
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        defaultTimezone:
+          type: string
+          description: 默认时区（必填）
+          example: "Asia/Shanghai"
+        currency:
+          type: string
+          description: 货币（可选）
+          example: "CNY"
+
+    TenantProfile:
+      type: object
+      properties:
+        legalName:
+          type: string
+          description: 法定名称
+          example: "ABC科技有限公司"
+        registrationCode:
+          type: string
+          description: 注册代码
+          example: "91110000MA01234567"
+        industry:
+          type: string
+          description: 行业分类
+          example: "信息技术服务"
+
+    TenantResponse:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+          description: 租户ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        tenantName:
+          type: string
+          description: 租户名称
+          example: "ABC公司"
+        status:
+          type: string
+          enum: [Initialized, Active, Suspended, Archived]
+          description: 租户状态
+          example: "Active"
+        contactInfo:
+          $ref: '#/components/schemas/ContactInfo'
+        context:
+          $ref: '#/components/schemas/TenantContext'
+        profile:
+          $ref: '#/components/schemas/TenantProfile'
+        createdAt:
+          type: string
+          format: date-time
+          description: 创建时间
+          example: "2025-01-27T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: 更新时间
+          example: "2025-01-27T10:00:00Z"
+
+    TenantListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: 当前页码
+          example: 1
+        pageSize:
+          type: integer
+          description: 每页数量
+          example: 20
+        total:
+          type: integer
+          description: 总记录数
+          example: 100
+        totalPages:
+          type: integer
+          description: 总页数
+          example: 5
+
+    TenantContextResponse:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+          description: 租户ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        defaultOrganizationId:
+          type: string
+          format: uuid
+          description: 默认组织根节点
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        defaultTimezone:
+          type: string
+          description: 默认时区
+          example: "Asia/Shanghai"
+        currency:
+          type: string
+          description: 货币
+          example: "CNY"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: 错误码
+              example: "TENANT_NAME_EXISTS"
+            message:
+              type: string
+              description: 错误消息（中文）
+              example: "租户名称已存在"
+            details:
+              type: object
+              description: 错误详情
+              additionalProperties: true
+

@@ -1,11 +1,13 @@
 ## 平台级 DDD 领域层通用能力设计规范
 
 ### 1. 文档背景与目标
+
 - 明确领域层（Domain Layer）在多租户 SaaS 平台中的统一建模规范，确保租户、组织、用户、IAM 等领域在 DDD + Clean Architecture 约束下保持纯净性与一致的领域语言。
 - 补充 `docs/designs/platform-cqrs-es-eda-design.md` 未覆盖的领域层能力，定义聚合根、实体、值对象、领域事件、仓储接口等基础设施。
 - 指导各业务模块复用领域层基线，减少重复实现并保证跨团队一致性。
 
 ### 2. 设计原则
+
 1. **领域纯净性**：领域层仅依赖自身和值对象，不依赖应用层（CQRS、CASL 等）与基础设施实现，保持可测试性与移植性。
 2. **统一领域语言**：公共值对象、枚举、异常等通过共享库管理，确保跨模块术语一致。
 3. **聚合边界明确**：聚合根负责维护不变式，聚合内部对象不得被外部直接修改。
@@ -17,6 +19,7 @@
 9. **租户/组织/部门上下文隔离**：所有聚合根、实体、值对象、领域事件必须显式持有 `tenantId`，并在需要时包含 `organizationId`、`departmentId` 等上下文；领域层需阻止跨租户/跨组织/跨部门操作，命令与事件必须传递完整上下文以保障下游隔离。
 
 ### 3. 目录与模块结构
+
 ```
 libs/core/domain-base/
 ├── aggregates/
@@ -52,6 +55,7 @@ libs/core/domain-base/
 ### 4. 核心组件与约束
 
 #### 4.1 聚合根与实体
+
 - **AggregateRootBase**：
   - 提供 `id`、`tenantId`、`organizationId`、`departmentId`、`auditTrail`、`softDeleteStatus`、`version` 等聚合上下文访问器。
   - 默认包含软删除状态（如 `deletedAt`、`deletedBy`、`isDeleted`），并通过 `markDeleted`/`restore` 提供恢复方法。
@@ -69,6 +73,7 @@ libs/core/domain-base/
   - `touch`、`markDeleted`、`restore` 负责更新审计轨迹与软删除状态，应用层不得绕过聚合直接操作审计字段。
 
 #### 4.2 值对象
+
 - **ValueObjectBase**：
   - 提供不可变构造、等值比较 (`equals`) 与序列化 (`toJSON`)。
   - 所有值对象须通过静态工厂（`create`、`fromString` 等）或命名构造函数创建，并执行参数校验。
@@ -80,6 +85,7 @@ libs/core/domain-base/
   - 禁止在领域层传递裸字符串/数字作为 ID 或状态。
 
 #### 4.3 领域事件
+
 - **DomainEventBase**：
   - 字段包含 `eventId`、`occurredAt`、`aggregateId`、`tenantId`、`auditMetadata`、`softDeleteStatus` 等。
   - 必须携带 `tenantId` 等跨模块必要上下文，防止事件丢失租户信息。
@@ -95,6 +101,7 @@ libs/core/domain-base/
   - 事件必须携带 `tenantId`（以及必要的 `organizationId`、`departmentId`），以保障下游服务进行租户隔离。
 
 #### 4.4 仓储接口
+
 - **RepositoryInterface**：
   - 标准方法：`save(aggregate)`, `findById(id)`, `findBy(criteria)`, `delete(id)`。
   - 以 `AggregateRepository` 命名规范定义（如 `UserAuthorizationRepository`）。
@@ -105,11 +112,13 @@ libs/core/domain-base/
   - 仓储接口需使用平台提供的值对象，避免原始类型，并默认排除软删除记录（除非显式 `includeDeleted`）。
 
 #### 4.5 领域服务
+
 - 提供跨聚合的业务逻辑封装，需实现 `DomainService` 接口。
 - 领域服务应保持无状态，依赖通过构造函数注入。
 - 服务实现需记录审计与错误信息，调用 `AuditService` 等操作必须在应用层完成，领域层只暴露意图；若需要记录内部操作人，可通过审计值对象传递。
 
 ### 5. 与应用层基线的依赖关系
+
 - 应用层（CQRS + ES + EDA）基于领域层构建，不允许反向引用。
 - 应用层命令/查询处理器在执行领域逻辑前后，负责调用：
   - `aggregate.pullDomainEvents()` → 发布事件。
@@ -118,6 +127,7 @@ libs/core/domain-base/
 - 领域层文档需提供对应用层基线文档的引用，说明依赖方向与合作方式。
 
 ### 6. 领域建模流程
+
 1. **识别领域边界**：通过事件风暴、业务访谈确定聚合根、实体、值对象。
 2. **定义聚合根**：继承平台基类，实现构造与不变式校验。
 3. **声明领域事件**：确保事件携带必要上下文。
@@ -126,6 +136,7 @@ libs/core/domain-base/
 6. **更新领域文档**：记录术语、约束、协作边界。
 
 ### 7. 测试与质量要求
+
 - 聚合根、值对象需编写旁置单元测试（覆盖不变式、行为、事件触发）。
 - 提供领域层测试基座（mock 仓储、值对象工厂）。
 - `@hl8/domain-testing`（位于 `libs/core/domain-testing/`）提供 `AggregateTestHarness` 等工具，聚合测试必须优先复用以减少重复样板。
@@ -133,11 +144,13 @@ libs/core/domain-base/
 - 质量门槛：核心聚合单元测试覆盖率 ≥ 95%，领域服务 ≥ 90%。
 
 ### 8. 版本管理与扩展
+
 - 领域层基线变更需记录在 `docs/designs/platform-domain-baseline.md` 中，并同步到 `CHANGELOG.md`。
 - 新增值对象或领域基类需经平台架构评审，确保不会引入应用层依赖。
 - 支持通过扩展包/目录（`libs/domain-extensions/`）提供可选的领域模式（如规格模式、聚合快照）。
 
 ### 9. 参考与链接
+
 - `docs/designs/platform-cqrs-es-eda-baseline.md`
 - `docs/designs/platform-cqrs-es-eda-design.md`
 - `docs/designs/iam-guide.md`
@@ -146,4 +159,3 @@ libs/core/domain-base/
 ---
 
 本规范与应用层通用能力文档共同构成平台级技术基线，领域团队在开展建模工作前需先审阅并与架构团队对齐，确保跨领域协作与演进过程中保持统一语言与实践。
-

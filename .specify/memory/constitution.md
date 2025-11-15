@@ -10,6 +10,7 @@ Sync Impact Report
   ✅ .specify/templates/tasks-template.md
 - 后续待办: 无
 -->
+
 # hl8-aisaas-platform Constitution
 
 ## Core Principles

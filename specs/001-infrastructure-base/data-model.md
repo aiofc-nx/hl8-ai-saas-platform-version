@@ -11,30 +11,34 @@
 
 **字段**：
 
-| 字段名 | 类型 | 说明 | 约束 |
-|--------|------|------|------|
-| eventId | string | 事件唯一标识 | 主键，不可为空 |
-| aggregateId | string | 聚合标识 | 索引，不可为空 |
-| tenantId | string | 租户标识 | 索引，不可为空 |
-| version | number | 事件版本号 | 索引，不可为空，>= 1 |
-| payload | unknown | 事件内容 | 不可为空 |
-| occurredAt | Date | 事件发生时间 | 不可为空 |
-| metadata | Record<string, unknown> | 事件元数据 | 可为空 |
+| 字段名      | 类型                    | 说明         | 约束                 |
+| ----------- | ----------------------- | ------------ | -------------------- |
+| eventId     | string                  | 事件唯一标识 | 主键，不可为空       |
+| aggregateId | string                  | 聚合标识     | 索引，不可为空       |
+| tenantId    | string                  | 租户标识     | 索引，不可为空       |
+| version     | number                  | 事件版本号   | 索引，不可为空，>= 1 |
+| payload     | unknown                 | 事件内容     | 不可为空             |
+| occurredAt  | Date                    | 事件发生时间 | 不可为空             |
+| metadata    | Record<string, unknown> | 事件元数据   | 可为空               |
 
 **关系**：
+
 - 一个聚合可以有多个事件（1:N）
 - 一个租户可以有多个事件（1:N）
 
 **验证规则**：
+
 - `eventId` 必须唯一
 - `version` 必须 >= 1
 - `aggregateId` 和 `tenantId` 组合必须唯一
 - `occurredAt` 必须 <= 当前时间
 
 **状态转换**：
+
 - 创建 → 已保存 → 已发布 → 已归档（可选）
 
 **索引**：
+
 - 主键：`eventId`
 - 唯一索引：`(aggregateId, tenantId, version)`
 - 索引：`tenantId`
@@ -48,25 +52,28 @@
 
 **字段**：
 
-| 字段名 | 类型 | 说明 | 约束 |
-|--------|------|------|------|
-| snapshotId | string | 快照唯一标识 | 主键，不可为空 |
-| aggregateId | string | 聚合标识 | 索引，不可为空 |
-| tenantId | string | 租户标识 | 索引，不可为空 |
-| version | number | 快照版本号 | 索引，不可为空，>= 1 |
-| payload | unknown | 快照内容 | 不可为空 |
-| createdAt | Date | 快照创建时间 | 不可为空 |
+| 字段名      | 类型    | 说明         | 约束                 |
+| ----------- | ------- | ------------ | -------------------- |
+| snapshotId  | string  | 快照唯一标识 | 主键，不可为空       |
+| aggregateId | string  | 聚合标识     | 索引，不可为空       |
+| tenantId    | string  | 租户标识     | 索引，不可为空       |
+| version     | number  | 快照版本号   | 索引，不可为空，>= 1 |
+| payload     | unknown | 快照内容     | 不可为空             |
+| createdAt   | Date    | 快照创建时间 | 不可为空             |
 
 **关系**：
+
 - 一个聚合可以有多个快照（1:N）
 - 一个租户可以有多个快照（1:N）
 
 **验证规则**：
+
 - `snapshotId` 必须唯一
 - `version` 必须 >= 1
 - `aggregateId` 和 `tenantId` 组合必须唯一
 
 **索引**：
+
 - 主键：`snapshotId`
 - 唯一索引：`(aggregateId, tenantId, version)`
 - 索引：`tenantId`
@@ -79,29 +86,33 @@
 
 **字段**：
 
-| 字段名 | 类型 | 说明 | 约束 |
-|--------|------|------|------|
-| auditId | string | 审计记录唯一标识 | 主键，不可为空 |
-| tenantId | string | 租户标识 | 索引，不可为空 |
-| userId | string | 用户标识 | 索引，不可为空 |
-| action | string | 操作类型 | 索引，不可为空 |
-| payload | unknown | 操作内容 | 不可为空 |
-| occurredAt | Date | 操作发生时间 | 索引，不可为空 |
-| metadata | Record<string, unknown> | 审计元数据 | 可为空 |
+| 字段名     | 类型                    | 说明             | 约束           |
+| ---------- | ----------------------- | ---------------- | -------------- |
+| auditId    | string                  | 审计记录唯一标识 | 主键，不可为空 |
+| tenantId   | string                  | 租户标识         | 索引，不可为空 |
+| userId     | string                  | 用户标识         | 索引，不可为空 |
+| action     | string                  | 操作类型         | 索引，不可为空 |
+| payload    | unknown                 | 操作内容         | 不可为空       |
+| occurredAt | Date                    | 操作发生时间     | 索引，不可为空 |
+| metadata   | Record<string, unknown> | 审计元数据       | 可为空         |
 
 **关系**：
+
 - 一个租户可以有多个审计记录（1:N）
 - 一个用户可以有多个审计记录（1:N）
 
 **验证规则**：
+
 - `auditId` 必须唯一
 - `action` 必须符合预定义的操作类型
 - `occurredAt` 必须 <= 当前时间
 
 **状态转换**：
+
 - 创建 → 已保存 → 已归档（可选）
 
 **索引**：
+
 - 主键：`auditId`
 - 索引：`tenantId`
 - 索引：`userId`
@@ -115,27 +126,30 @@
 
 **字段**：
 
-| 字段名 | 类型 | 说明 | 约束 |
-|--------|------|------|------|
-| ruleId | string | 规则唯一标识 | 主键，不可为空 |
-| userId | string | 用户标识 | 索引，不可为空 |
-| tenantId | string | 租户标识 | 索引，不可为空 |
-| organizationId | string | 组织标识 | 索引，可为空 |
-| ability | unknown | 权限能力 | 不可为空 |
-| createdAt | Date | 规则创建时间 | 不可为空 |
-| updatedAt | Date | 规则更新时间 | 不可为空 |
+| 字段名         | 类型    | 说明         | 约束           |
+| -------------- | ------- | ------------ | -------------- |
+| ruleId         | string  | 规则唯一标识 | 主键，不可为空 |
+| userId         | string  | 用户标识     | 索引，不可为空 |
+| tenantId       | string  | 租户标识     | 索引，不可为空 |
+| organizationId | string  | 组织标识     | 索引，可为空   |
+| ability        | unknown | 权限能力     | 不可为空       |
+| createdAt      | Date    | 规则创建时间 | 不可为空       |
+| updatedAt      | Date    | 规则更新时间 | 不可为空       |
 
 **关系**：
+
 - 一个用户可以有多个权限规则（1:N）
 - 一个租户可以有多个权限规则（1:N）
 - 一个组织可以有多个权限规则（1:N）
 
 **验证规则**：
+
 - `ruleId` 必须唯一
 - `ability` 必须符合 CASL 权限规则格式
 - `updatedAt` 必须 >= `createdAt`
 
 **索引**：
+
 - 主键：`ruleId`
 - 唯一索引：`(userId, tenantId, organizationId)`
 - 索引：`tenantId`
@@ -148,25 +162,28 @@
 
 **字段**：
 
-| 字段名 | 类型 | 说明 | 约束 |
-|--------|------|------|------|
-| configId | string | 配置唯一标识 | 主键，不可为空 |
-| key | string | 配置键 | 索引，不可为空 |
-| value | unknown | 配置值 | 不可为空 |
-| environment | string | 环境标识 | 索引，不可为空 |
-| createdAt | Date | 配置创建时间 | 不可为空 |
-| updatedAt | Date | 配置更新时间 | 不可为空 |
+| 字段名      | 类型    | 说明         | 约束           |
+| ----------- | ------- | ------------ | -------------- |
+| configId    | string  | 配置唯一标识 | 主键，不可为空 |
+| key         | string  | 配置键       | 索引，不可为空 |
+| value       | unknown | 配置值       | 不可为空       |
+| environment | string  | 环境标识     | 索引，不可为空 |
+| createdAt   | Date    | 配置创建时间 | 不可为空       |
+| updatedAt   | Date    | 配置更新时间 | 不可为空       |
 
 **关系**：
+
 - 一个环境可以有多个配置（1:N）
 
 **验证规则**：
+
 - `configId` 必须唯一
 - `key` 必须符合预定义的配置键格式
 - `value` 必须符合配置值的类型要求
 - `environment` 必须符合预定义的环境标识
 
 **索引**：
+
 - 主键：`configId`
 - 唯一索引：`(key, environment)`
 - 索引：`environment`
@@ -177,23 +194,26 @@
 
 **字段**：
 
-| 字段名 | 类型 | 说明 | 约束 |
-|--------|------|------|------|
-| errorCode | string | 错误码 | 索引，不可为空 |
-| message | string | 错误信息（中文） | 不可为空 |
-| context | Record<string, unknown> | 错误上下文 | 可为空 |
-| stack | string | 错误堆栈 | 可为空 |
-| occurredAt | Date | 错误发生时间 | 不可为空 |
+| 字段名     | 类型                    | 说明             | 约束           |
+| ---------- | ----------------------- | ---------------- | -------------- |
+| errorCode  | string                  | 错误码           | 索引，不可为空 |
+| message    | string                  | 错误信息（中文） | 不可为空       |
+| context    | Record<string, unknown> | 错误上下文       | 可为空         |
+| stack      | string                  | 错误堆栈         | 可为空         |
+| occurredAt | Date                    | 错误发生时间     | 不可为空       |
 
 **关系**：
+
 - 无直接关系
 
 **验证规则**：
+
 - `errorCode` 必须符合预定义的错误码格式
 - `message` 必须使用中文
 - `occurredAt` 必须 <= 当前时间
 
 **索引**：
+
 - 索引：`errorCode`
 - 索引：`occurredAt`
 
@@ -423,4 +443,3 @@ CREATE INDEX idx_configurations_environment ON configurations(environment);
 - 使用事件归档减少存储成本
 - 使用审计记录归档减少存储成本
 - 定期清理过期数据（如配置缓存）
-

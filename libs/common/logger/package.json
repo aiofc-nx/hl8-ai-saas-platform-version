@@ -36,18 +36,18 @@
   },
   "dependencies": {
     "@hl8/config": "workspace:*",
-    "@nestjs/common": "11.1.8",
-    "@nestjs/core": "11.1.8",
+    "@nestjs/common": "11.1.9",
+    "@nestjs/core": "11.1.9",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.2",
     "fastify": "^5.6.1",
     "pino": "^10.1.0",
     "pino-pretty": "^13.1.2",
-    "reflect-metadata": "0.2.2"
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@jest/globals": "^30.2.0",
-    "@nestjs/testing": "11.1.8",
+    "@nestjs/testing": "11.1.9",
     "@types/jest": "^30.0.0",
     "@types/node": "24.10.0",
     "jest": "^30.2.0",

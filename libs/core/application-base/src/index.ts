@@ -11,6 +11,7 @@ export * from "./audit/audit-coordinator.js";
 export * from "./audit/audit-command.interceptor.js";
 export * from "./audit/audit-query.interceptor.js";
 export * from "./audit/audit-record.exception.js";
+export * from "./decorators/security-context.decorator.js";
 export * from "./interfaces/index.js";
 export * from "./sagas/base-saga.js";
 export * from "./sagas/saga-step.interface.js";

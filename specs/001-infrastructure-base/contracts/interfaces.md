@@ -67,7 +67,7 @@ export class EventStoreError extends Error {
   constructor(
     public readonly code: string,
     public readonly message: string,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -105,7 +105,7 @@ export class EventPublisherError extends Error {
   constructor(
     public readonly code: string,
     public readonly message: string,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -143,7 +143,7 @@ export class MessageBrokerError extends Error {
   constructor(
     public readonly code: string,
     public readonly message: string,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -190,7 +190,7 @@ export class CaslAbilityError extends Error {
   constructor(
     public readonly code: string,
     public readonly message: string,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -239,7 +239,7 @@ export interface AbilityCacheService {
    * @returns Promise<void>
    * @throws {AbilityCacheError} 当缓存服务不可用时，仅记录日志而不抛出异常
    */
-  invalidate(context: SecurityContext, level: 'user' | 'tenant' | 'global'): Promise<void>;
+  invalidate(context: SecurityContext, level: "user" | "tenant" | "global"): Promise<void>;
 }
 ```
 
@@ -253,7 +253,7 @@ export class AbilityCacheError extends Error {
   constructor(
     public readonly code: string,
     public readonly message: string,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -325,7 +325,7 @@ export class AuditServiceError extends Error {
   constructor(
     public readonly code: string,
     public readonly message: string,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -385,7 +385,7 @@ export class ConfigurationError extends Error {
   constructor(
     public readonly code: string,
     public readonly message: string,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -442,22 +442,8 @@ export interface ExceptionService {
  * 基础设施核心模块
  */
 @Module({
-  imports: [
-    EventStoreModule,
-    EventPublisherModule,
-    CaslAbilityModule,
-    AuditServiceModule,
-    ConfigurationModule,
-    ExceptionServiceModule,
-  ],
-  exports: [
-    EventStore,
-    EventPublisher,
-    CaslAbilityService,
-    AuditService,
-    ConfigurationService,
-    ExceptionService,
-  ],
+  imports: [EventStoreModule, EventPublisherModule, CaslAbilityModule, AuditServiceModule, ConfigurationModule, ExceptionServiceModule],
+  exports: [EventStore, EventPublisher, CaslAbilityService, AuditService, ConfigurationService, ExceptionService],
 })
 export class InfrastructureCoreModule {}
 ```
@@ -627,4 +613,3 @@ await this.exceptionService.log(exception);
 ## 兼容性
 
 所有接口必须保持向后兼容，重大变更必须通过版本号区分。
-
