@@ -119,7 +119,7 @@ export class ListTenantsHandler extends CaslQueryHandler<
         tenantId: projection.tenantId,
         tenantName: projection.tenantName,
         status: projection.status,
-        contactName: projection.contactName,
+        contactName: projection.contactName ?? null,
         email: projection.email,
         phone: projection.phone ?? null,
         createdAt: projection.createdAt,

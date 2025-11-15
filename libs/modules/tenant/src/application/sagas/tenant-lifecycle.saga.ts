@@ -159,10 +159,14 @@ export class TenantLifecycleSaga
       //   new TenantInitializationCompletedEvent(tenantId, sagaId),
       // );
     } catch (error) {
-      this.logger.error("租户创建 Saga 执行失败", error, {
-        tenantId,
-        sagaId,
-      });
+      this.logger.error(
+        error instanceof Error ? error : new Error("租户创建 Saga 执行失败"),
+        {
+          tenantId,
+          sagaId,
+          originalError: error instanceof Error ? error.message : String(error),
+        },
+      );
 
       // 记录补偿事件，支持后续重试
       // 注意：Saga 失败不应该阻止租户创建成功
@@ -238,10 +242,14 @@ export class TenantLifecycleSaga
       //   new TenantActivationCompletedEvent(tenantId, sagaId),
       // );
     } catch (error) {
-      this.logger.error("租户激活 Saga 执行失败", error, {
-        tenantId,
-        sagaId,
-      });
+      this.logger.error(
+        error instanceof Error ? error : new Error("租户激活 Saga 执行失败"),
+        {
+          tenantId,
+          sagaId,
+          originalError: error instanceof Error ? error.message : String(error),
+        },
+      );
 
       // TODO: 记录补偿事件
       // await this.eventBus.publish(
@@ -314,10 +322,14 @@ export class TenantLifecycleSaga
       //   new TenantSuspensionCompletedEvent(tenantId, sagaId),
       // );
     } catch (error) {
-      this.logger.error("租户停用 Saga 执行失败", error, {
-        tenantId,
-        sagaId,
-      });
+      this.logger.error(
+        error instanceof Error ? error : new Error("租户停用 Saga 执行失败"),
+        {
+          tenantId,
+          sagaId,
+          originalError: error instanceof Error ? error.message : String(error),
+        },
+      );
 
       // TODO: 记录补偿事件
       // await this.eventBus.publish(

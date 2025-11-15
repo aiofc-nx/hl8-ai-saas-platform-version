@@ -27,7 +27,7 @@ import {
   OrganizationId,
   ValueObjectBase,
 } from "@hl8/domain-base";
-import { assertNonEmptyString } from "@hl8/domain-base/utils/domain-guards.js";
+import { assertNonEmptyString } from "@hl8/domain-base";
 
 /**
  * 租户上下文值对象的内部属性结构

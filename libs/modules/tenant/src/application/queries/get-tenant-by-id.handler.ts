@@ -93,7 +93,7 @@ export class GetTenantByIdHandler extends CaslQueryHandler<
     }
 
     // 2. 转换为响应 DTO
-    const readModel = new TenantReadModel({
+    const readModel = TenantReadModel.fromProjection({
       tenantId: projection.tenantId,
       tenantName: projection.tenantName,
       status: projection.status,

@@ -32,14 +32,14 @@
  * - isDeleted (BOOLEAN, 索引)
  */
 
-import type { Migration } from "@mikro-orm/migrations";
+import { Migration } from "@mikro-orm/migrations";
 
 /**
  * 创建租户相关表的迁移
  *
  * @description 创建租户读模型投影表
  */
-export class Migration20250127000000_CreateTenantTables implements Migration {
+export class Migration20250127000000_CreateTenantTables extends Migration {
   /**
    * 执行迁移（向上）
    *

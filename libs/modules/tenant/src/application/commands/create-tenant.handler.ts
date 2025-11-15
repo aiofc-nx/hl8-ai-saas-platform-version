@@ -104,7 +104,7 @@ export class CreateTenantHandler extends CaslCommandHandler<
     const tenant = TenantAggregate.create({
       tenantName: command.tenantName,
       contactInfo: command.contactInfo,
-      context: command.context,
+      context: command.tenantContext,
       profile: command.profile,
       createdBy: userId,
     });

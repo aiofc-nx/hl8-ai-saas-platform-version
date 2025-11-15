@@ -137,7 +137,7 @@ importers:
         version: 6.6.0
       '@mikro-orm/knex':
         specifier: ^6.5.9
-        version: 6.5.9(@mikro-orm/core@6.6.0)(pg@8.16.3)
+        version: 6.6.0(@mikro-orm/core@6.6.0)(pg@8.16.3)
       '@mikro-orm/migrations':
         specifier: ^6.5.9
         version: 6.5.9(@mikro-orm/core@6.6.0)(@types/node@24.10.0)(pg@8.16.3)
@@ -167,7 +167,7 @@ importers:
         version: 11.0.3(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.9)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/platform-fastify':
         specifier: ^11.0.1
-        version: 11.1.8(@fastify/static@8.3.0)(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.9)
+        version: 11.1.9(@fastify/static@8.3.0)(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.9)
       '@nestjs/swagger':
         specifier: ^11.2.1
         version: 11.2.1(@fastify/static@8.3.0)(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.9)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)
@@ -415,10 +415,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/async-storage/dist: {}
-
-  libs/async-storage/src: {}
-
   libs/bootstrap:
     dependencies:
       '@hl8/logger':
@@ -428,14 +424,14 @@ importers:
         specifier: workspace:*
         version: link:../common/swagger
       '@nestjs/common':
-        specifier: 11.1.8
-        version: 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+        specifier: 11.1.9
+        version: 11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core':
-        specifier: 11.1.8
-        version: 11.1.8(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.8)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+        specifier: 11.1.9
+        version: 11.1.9(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.8)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/platform-fastify':
-        specifier: 11.1.8
-        version: 11.1.8(@fastify/static@8.3.0)(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)
+        specifier: 11.1.9
+        version: 11.1.9(@fastify/static@8.3.0)(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.9)
       chalk:
         specifier: ^4.1.2
         version: 4.1.2
@@ -491,10 +487,6 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
-
-  libs/bootstrap/dist: {}
-
-  libs/bootstrap/src: {}
 
   libs/cache:
     dependencies:
@@ -559,12 +551,6 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
-
-  libs/cache/dist: {}
-
-  libs/cache/docs: {}
-
-  libs/cache/src: {}
 
   libs/common/config:
     dependencies:
@@ -770,6 +756,9 @@ importers:
       '@casl/ability':
         specifier: ^6.7.3
         version: 6.7.3
+      '@hl8/exceptions':
+        specifier: workspace:*
+        version: link:../../common/exceptions
       '@nestjs/common':
         specifier: 11.1.9
         version: 11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -954,8 +943,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/coverage/libs: {}
-
   libs/mikro-orm-nestjs:
     dependencies:
       '@hl8/config':
@@ -969,16 +956,16 @@ importers:
         version: link:../common/logger
       '@mikro-orm/core':
         specifier: ^6.5.9
-        version: 6.5.9
+        version: 6.6.0
       '@mikro-orm/knex':
         specifier: ^6.2.7
-        version: 6.5.9(@mikro-orm/core@6.5.9)(pg@8.16.3)
+        version: 6.6.0(@mikro-orm/core@6.6.0)(pg@8.16.3)
       '@mikro-orm/mongodb':
         specifier: ^6.2.7
-        version: 6.5.9(@mikro-orm/core@6.5.9)(socks@2.8.7)
+        version: 6.5.9(@mikro-orm/core@6.6.0)(socks@2.8.7)
       '@mikro-orm/postgresql':
         specifier: ^6.2.7
-        version: 6.5.9(@mikro-orm/core@6.5.9)
+        version: 6.6.0(@mikro-orm/core@6.6.0)
       '@nestjs/common':
         specifier: 11.1.8
         version: 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -1029,11 +1016,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/mikro-orm-nestjs/dist: {}
-
   libs/mikro-orm-nestjs/docs: {}
-
-  libs/mikro-orm-nestjs/src: {}
 
   libs/mikro-orm-nestjs/tests: {}
 
@@ -1072,6 +1055,9 @@ importers:
       '@mikro-orm/core':
         specifier: ^6.6.0
         version: 6.6.0
+      '@mikro-orm/migrations':
+        specifier: ^6.5.9
+        version: 6.5.9(@mikro-orm/core@6.6.0)(@types/node@24.10.0)(pg@8.16.3)
       '@mikro-orm/postgresql':
         specifier: ^6.6.0
         version: 6.6.0(@mikro-orm/core@6.6.0)
@@ -1084,6 +1070,9 @@ importers:
       '@nestjs/cqrs':
         specifier: ^11.0.3
         version: 11.0.3(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.9)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.2.1
+        version: 11.2.1(@fastify/static@8.3.0)(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.9)(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)
       class-transformer:
         specifier: 0.5.1
         version: 0.5.1
@@ -1147,10 +1136,10 @@ importers:
         version: link:../common/logger
       '@mikro-orm/core':
         specifier: ^6.5.9
-        version: 6.5.9
+        version: 6.6.0
       '@mikro-orm/nestjs':
         specifier: ^6.1.1
-        version: 6.1.1(@mikro-orm/core@6.5.9)(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)
+        version: 6.1.1(@mikro-orm/core@6.6.0)(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)
       '@nestjs/common':
         specifier: 11.1.8
         version: 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -1182,8 +1171,6 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
-
-  libs/multi-tenancy/dist: {}
 
   libs/multi-tenancy/src: {}
 
@@ -2022,12 +2009,6 @@ packages:
       '@nestjs/common': ^10.0.0 || ^11.0.5
       '@nestjs/core': ^10.0.0 || ^11.0.5
 
-  '@mikro-orm/postgresql@6.5.9':
-    resolution: {integrity: sha512-0pIWgHolYzAHa2/0fXjDNzGYK833XNHCuH079c65gScCl1s+YuByXPW7rJIYMqVXsgWtWpuS43G0VJ+jglXPQg==}
-    engines: {node: '>= 18.12.0'}
-    peerDependencies:
-      '@mikro-orm/core': ^6.0.0
-
   '@mikro-orm/postgresql@6.6.0':
     resolution: {integrity: sha512-CuiSO5FJXT0/uLe9eB0qrV0T90oc0eId/TXc+hV47HrvBVRcL3TcrO49WNqvl1qy9B0garIf+zmd685cc7amug==}
     engines: {node: '>= 18.12.0'}
@@ -2160,8 +2141,8 @@ packages:
       '@nestjs/common': ^11.0.0
       '@nestjs/core': ^11.0.0
 
-  '@nestjs/platform-fastify@11.1.8':
-    resolution: {integrity: sha512-4XiiTiTkF9UbVDAuHDyVIzgr43L2sI3vLs9A52ov2lrOJcqyKwTYL/NiCQd4dtUQm1L6M0jOrJhzpYXobX5uMw==}
+  '@nestjs/platform-fastify@11.1.9':
+    resolution: {integrity: sha512-OOCyg36CP+WrJn7KIk1E/XdCPegcIdH5zi2txwqUtQNshl6c0VWv+8qotyOncPwEFuiOgnn3fuGveQj7DPNKgA==}
     peerDependencies:
       '@fastify/static': ^8.0.0
       '@fastify/view': ^10.0.0 || ^11.0.0
@@ -7840,20 +7821,6 @@ snapshots:
       - supports-color
       - tedious
 
-  '@mikro-orm/mongodb@6.5.9(@mikro-orm/core@6.5.9)(socks@2.8.7)':
-    dependencies:
-      '@mikro-orm/core': 6.5.9
-      bson: 6.10.4
-      mongodb: 6.20.0(socks@2.8.7)
-    transitivePeerDependencies:
-      - '@aws-sdk/credential-providers'
-      - '@mongodb-js/zstd'
-      - gcp-metadata
-      - kerberos
-      - mongodb-client-encryption
-      - snappy
-      - socks
-
   '@mikro-orm/mongodb@6.5.9(@mikro-orm/core@6.6.0)(socks@2.8.7)':
     dependencies:
       '@mikro-orm/core': 6.6.0
@@ -7868,30 +7835,11 @@ snapshots:
       - snappy
       - socks
 
-  '@mikro-orm/nestjs@6.1.1(@mikro-orm/core@6.5.9)(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)':
+  '@mikro-orm/nestjs@6.1.1(@mikro-orm/core@6.6.0)(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)':
     dependencies:
-      '@mikro-orm/core': 6.5.9
+      '@mikro-orm/core': 6.6.0
       '@nestjs/common': 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 11.1.8(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.8)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-
-  '@mikro-orm/postgresql@6.5.9(@mikro-orm/core@6.5.9)':
-    dependencies:
-      '@mikro-orm/core': 6.5.9
-      '@mikro-orm/knex': 6.5.9(@mikro-orm/core@6.5.9)(pg@8.16.3)
-      pg: 8.16.3
-      postgres-array: 3.0.4
-      postgres-date: 2.1.0
-      postgres-interval: 4.0.2
-    transitivePeerDependencies:
-      - better-sqlite3
-      - libsql
-      - mariadb
-      - mysql
-      - mysql2
-      - pg-native
-      - sqlite3
-      - supports-color
-      - tedious
 
   '@mikro-orm/postgresql@6.6.0(@mikro-orm/core@6.6.0)':
     dependencies:
@@ -8096,22 +8044,7 @@ snapshots:
       - supports-color
     optional: true
 
-  '@nestjs/platform-fastify@11.1.8(@fastify/static@8.3.0)(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.8)':
-    dependencies:
-      '@fastify/cors': 11.1.0
-      '@fastify/formbody': 8.0.2
-      '@fastify/middie': 9.0.3
-      '@nestjs/common': 11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/core': 11.1.8(@nestjs/common@11.1.8(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.8)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      fast-querystring: 1.1.2
-      fastify: 5.4.0
-      light-my-request: 6.6.0
-      path-to-regexp: 8.3.0
-      tslib: 2.8.1
-    optionalDependencies:
-      '@fastify/static': 8.3.0
-
-  '@nestjs/platform-fastify@11.1.8(@fastify/static@8.3.0)(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.9)':
+  '@nestjs/platform-fastify@11.1.9(@fastify/static@8.3.0)(@nestjs/common@11.1.9(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.9)':
     dependencies:
       '@fastify/cors': 11.1.0
       '@fastify/formbody': 8.0.2

@@ -54,7 +54,7 @@ export interface TenantListItem {
   readonly tenantId: string;
   readonly tenantName: string;
   readonly status: string;
-  readonly contactName: string;
+  readonly contactName: string | null;
   readonly email: string;
   readonly phone?: string | null;
   readonly createdAt: Date;

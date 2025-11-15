@@ -31,7 +31,10 @@ import {
 } from "@nestjs/swagger";
 import { GetTenantContextQuery } from "../../application/queries/get-tenant-context.query.js";
 import { GetTenantByIdQuery } from "../../application/queries/get-tenant-by-id.query.js";
-import { ListTenantsQuery } from "../../application/queries/list-tenants.query.js";
+import {
+  ListTenantsQuery,
+  type TenantListItem,
+} from "../../application/queries/list-tenants.query.js";
 import { TenantContextResponseDto } from "../dtos/tenant-context-response.dto.js";
 import { ListTenantsQueryDto } from "../dtos/list-tenants-query.dto.js";
 import { TenantListResponseDto } from "../dtos/tenant-list-response.dto.js";
@@ -166,12 +169,12 @@ export class TenantQueryController {
 
     // 转换为响应 DTO
     const items = result.items.map(
-      (item) =>
+      (item: TenantListItem) =>
         new TenantListItemDto({
           tenantId: item.tenantId,
           tenantName: item.tenantName,
           status: item.status,
-          contactName: item.contactName,
+          contactName: item.contactName ?? "",
           email: item.email,
           phone: item.phone,
           createdAt: item.createdAt,

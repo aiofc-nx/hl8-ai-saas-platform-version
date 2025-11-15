@@ -34,7 +34,8 @@
       "@hl8/bootstrap": ["libs/bootstrap/src/index.ts"],
       "@hl8/mikro-orm-nestjs": ["libs/mikro-orm-nestjs/src/index.ts"],
       "@hl8/async-storage": ["libs/async-storage/src/index.ts"],
-      "@hl8/swagger": ["libs/common/swagger/src/index.ts"]
+      "@hl8/swagger": ["libs/common/swagger/src/index.ts"],
+      "@hl8/tenant":["libs/modules/tenant/src/index.ts"]
     }
   }
 }

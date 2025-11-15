@@ -33,7 +33,7 @@ import { OrganizationId } from "@hl8/domain-base";
 import { TenantContactInfo } from "../../domains/tenant/value-objects/tenant-contact-info.vo.js";
 import { TenantContext } from "../../domains/tenant/value-objects/tenant-context.vo.js";
 import { TenantName } from "../../domains/tenant/value-objects/tenant-name.vo.js";
-import type { TenantProfile } from "../../domains/tenant/entities/tenant-profile.entity.js";
+import { TenantProfile } from "../../domains/tenant/entities/tenant-profile.entity.js";
 
 /**
  * 创建租户命令的数据
@@ -74,9 +74,9 @@ export class CreateTenantCommand extends CaslCommandBase<{ tenantId: string }> {
   public readonly contactInfo: TenantContactInfo;
 
   /**
-   * 组织上下文
+   * 租户组织上下文
    */
-  public readonly context: TenantContext;
+  public readonly tenantContext: TenantContext;
 
   /**
    * 租户档案（可选）
@@ -95,7 +95,7 @@ export class CreateTenantCommand extends CaslCommandBase<{ tenantId: string }> {
     // 创建值对象
     this.tenantName = TenantName.create(data.tenantName);
     this.contactInfo = TenantContactInfo.create(data.contactInfo);
-    this.context = TenantContext.create({
+    this.tenantContext = TenantContext.create({
       defaultOrganizationId: OrganizationId.create(
         data.context.defaultOrganizationId,
       ),
@@ -128,7 +128,8 @@ export class CreateTenantCommand extends CaslCommandBase<{ tenantId: string }> {
     return {
       tenantName: this.tenantName.value,
       email: this.contactInfo.email,
-      defaultOrganizationId: this.context.defaultOrganizationId.toString(),
+      defaultOrganizationId:
+        this.tenantContext.defaultOrganizationId.toString(),
     };
   }
 }
