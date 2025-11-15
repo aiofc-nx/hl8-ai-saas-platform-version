@@ -55,7 +55,7 @@
     "password": "aiofix",
     "dbName": "hl8-platform",
     "schema": "public",
-    "debug": false,
+    "debug": true,
     "registerRequestContext": true,
     "autoLoadEntities": true,
     "entities": {

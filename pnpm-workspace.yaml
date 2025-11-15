@@ -2,5 +2,8 @@ packages:
 - apps/*
 - packages/*
 - libs/**/*
+- "!libs/**/dist"
+- "!apps/**/dist"
+- "!packages/**/dist"
 
 

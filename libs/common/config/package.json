@@ -54,7 +54,7 @@
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/lodash.merge": "^4.6.9",
-    "@types/node": "24.10.0",
+    "@types/node": "24.10.1",
     "jest": "^30.2.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"

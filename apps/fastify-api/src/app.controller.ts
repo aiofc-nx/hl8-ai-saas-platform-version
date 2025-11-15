@@ -2,6 +2,7 @@ import { Controller, Get } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Logger } from "@hl8/logger";
 import type { StructuredLogContext } from "@hl8/logger";
+import { EntityManager } from "@mikro-orm/core";
 import { AppConfig } from "./config/app.config.js";
 
 /**
@@ -22,6 +23,7 @@ export class AppController {
   constructor(
     logger: Logger,
     private readonly config: AppConfig, // 注入配置服务
+    private readonly em: EntityManager, // 注入 EntityManager 用于数据库连接测试（单数据源场景直接注入）
   ) {
     // 创建子日志器，自动继承请求上下文
     this.logger = logger.child({
@@ -149,5 +151,100 @@ export class AppController {
     } satisfies StructuredLogContext);
 
     return result;
+  }
+
+  /**
+   * @description 数据库连接测试端点，用于验证数据库连接状态
+   * @returns 数据库连接状态信息
+   */
+  @Get("db/health")
+  @ApiOperation({
+    summary: "数据库连接测试",
+    description: "测试数据库连接是否正常",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "数据库连接正常",
+    schema: {
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          example: "connected",
+        },
+        database: {
+          type: "string",
+          example: "hl8-platform",
+        },
+        version: {
+          type: "string",
+          example: "PostgreSQL 15.0",
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 503,
+    description: "数据库连接失败",
+  })
+  async getDbHealth(): Promise<{
+    status: string;
+    database?: string;
+    version?: string;
+    error?: string;
+  }> {
+    this.logger.log("数据库连接测试请求", {
+      business: {
+        operation: "dbHealthCheck",
+        resource: "Database",
+        action: "check",
+      },
+    } satisfies StructuredLogContext);
+
+    try {
+      // 执行简单的 SQL 查询来测试连接
+      const result = await this.em
+        .getConnection()
+        .execute("SELECT version(), current_database() as db_name");
+
+      const version = result[0]?.version as string | undefined;
+      const dbName = result[0]?.db_name as string | undefined;
+
+      const response = {
+        status: "connected",
+        database: dbName,
+        version: version?.split(",")[0], // 只取版本号部分
+      };
+
+      this.logger.log("数据库连接测试成功", {
+        business: {
+          operation: "dbHealthCheck",
+          resource: "Database",
+          action: "completed",
+        },
+        database: dbName,
+      } satisfies StructuredLogContext);
+
+      return response;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const errorObj =
+        error instanceof Error ? error : new Error(String(error));
+
+      this.logger.error(errorObj, {
+        business: {
+          operation: "dbHealthCheck",
+          resource: "Database",
+          action: "failed",
+        },
+        error: errorMessage,
+      } satisfies StructuredLogContext);
+
+      return {
+        status: "disconnected",
+        error: errorMessage,
+      };
+    }
   }
 }
