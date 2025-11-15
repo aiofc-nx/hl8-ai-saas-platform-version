@@ -46,8 +46,9 @@
  * ```
  */
 
-import { Type } from "class-transformer";
+import { Expose, Type } from "class-transformer";
 import {
+  IsBoolean,
   IsIn,
   IsNumber,
   IsOptional,
@@ -61,6 +62,236 @@ import {
   SwaggerConfig as BaseSwaggerConfig,
   SwaggerServer,
 } from "@hl8/swagger";
+
+/**
+ * 数据库实体配置
+ *
+ * @description 定义实体文件的路径和匹配规则
+ */
+export class DatabaseEntitiesConfig {
+  /**
+   * @description 编译后的实体文件 Glob 模式
+   * @default './dist/entities/**\/\*.js'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly glob?: string;
+
+  /**
+   * @description TypeScript 实体文件 Glob 模式
+   * @default './src/entities/**\/\*.ts'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly tsGlob?: string;
+}
+
+/**
+ * 数据库迁移配置
+ *
+ * @description 定义迁移文件的路径和命名规则
+ */
+export class DatabaseMigrationsConfig {
+  /**
+   * @description 迁移表名
+   * @default 'mikro_orm_migrations'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly tableName?: string;
+
+  /**
+   * @description 编译后的迁移文件路径
+   * @default './dist/database/migrations'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly path?: string;
+
+  /**
+   * @description TypeScript 迁移文件路径
+   * @default './src/database/migrations'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly pathTs?: string;
+
+  /**
+   * @description 迁移文件 Glob 模式
+   * @default '!(*.d).{js,ts}'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly glob?: string;
+}
+
+/**
+ * 数据库种子配置
+ *
+ * @description 定义种子文件的路径和命名规则
+ */
+export class DatabaseSeederConfig {
+  /**
+   * @description 编译后的种子文件路径
+   * @default './dist/database/seeders'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly path?: string;
+
+  /**
+   * @description TypeScript 种子文件路径
+   * @default './src/database/seeders'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly pathTs?: string;
+
+  /**
+   * @description 种子文件 Glob 模式
+   * @default '!(*.d).{js,ts}'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly glob?: string;
+
+  /**
+   * @description 默认种子类名
+   * @default 'DatabaseSeeder'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly defaultSeeder?: string;
+
+  /**
+   * @description 种子文件输出类型
+   * @default 'ts'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly emit?: string;
+
+  /**
+   * @description 种子文件命名模式
+   * @default '[name].seeder'
+   */
+  @IsString()
+  @IsOptional()
+  public readonly fileNamePattern?: string;
+}
+
+/**
+ * 数据库配置
+ *
+ * @description 定义 MikroORM 数据库连接和相关配置
+ */
+export class DatabaseConfig {
+  /**
+   * @description 数据库主机地址
+   * @default 'localhost'
+   */
+  @Expose()
+  @IsString()
+  @IsOptional()
+  public host?: string;
+
+  /**
+   * @description 数据库端口
+   * @default 5432
+   */
+  @Expose()
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  public port?: number;
+
+  /**
+   * @description 数据库用户名
+   */
+  @Expose()
+  @IsString()
+  @IsOptional()
+  public user?: string;
+
+  /**
+   * @description 数据库密码
+   */
+  @Expose()
+  @IsString()
+  @IsOptional()
+  public password?: string;
+
+  /**
+   * @description 数据库名称
+   */
+  @Expose()
+  @IsString()
+  @IsOptional()
+  public dbName?: string;
+
+  /**
+   * @description 数据库 Schema 名称
+   * @default 'public'
+   */
+  @Expose()
+  @IsString()
+  @IsOptional()
+  public schema?: string;
+
+  /**
+   * @description 是否启用调试模式
+   * @default false
+   */
+  @Expose()
+  @IsBoolean()
+  @IsOptional()
+  public debug?: boolean;
+
+  /**
+   * @description 是否自动注册请求上下文
+   * @default true
+   */
+  @Expose()
+  @IsBoolean()
+  @IsOptional()
+  public registerRequestContext?: boolean;
+
+  /**
+   * @description 是否自动加载实体
+   * @default true
+   */
+  @Expose()
+  @IsBoolean()
+  @IsOptional()
+  public autoLoadEntities?: boolean;
+
+  /**
+   * @description 实体配置
+   */
+  @Expose()
+  @ValidateNested()
+  @Type(() => DatabaseEntitiesConfig)
+  @IsOptional()
+  public entities?: DatabaseEntitiesConfig;
+
+  /**
+   * @description 迁移配置
+   */
+  @Expose()
+  @ValidateNested()
+  @Type(() => DatabaseMigrationsConfig)
+  @IsOptional()
+  public migrations?: DatabaseMigrationsConfig;
+
+  /**
+   * @description 种子配置
+   */
+  @Expose()
+  @ValidateNested()
+  @Type(() => DatabaseSeederConfig)
+  @IsOptional()
+  public seeder?: DatabaseSeederConfig;
+}
 
 /**
  * Swagger 配置
@@ -207,4 +438,14 @@ export class AppConfig {
   @Type(() => SwaggerConfig)
   @IsOptional()
   public readonly swagger: SwaggerConfig = new SwaggerConfig();
+
+  /**
+   * 数据库配置
+   *
+   * @description MikroORM 数据库连接和相关配置
+   */
+  @ValidateNested()
+  @Type(() => DatabaseConfig)
+  @IsOptional()
+  public readonly database?: DatabaseConfig = new DatabaseConfig();
 }

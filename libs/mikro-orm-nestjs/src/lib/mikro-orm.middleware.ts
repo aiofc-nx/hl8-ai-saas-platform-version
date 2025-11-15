@@ -1,5 +1,10 @@
 import { MikroORM, RequestContext } from "@mikro-orm/core";
-import { Inject, Injectable, type NestMiddleware } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  Optional,
+  type NestMiddleware,
+} from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 
 import {
@@ -24,7 +29,13 @@ export class MikroOrmMiddleware implements NestMiddleware {
     /**
      * @description Nest 模块引用，用于按需解析 MikroORM 实例
      */
-    private readonly moduleRef: ModuleRef,
+    @Optional() private readonly moduleRef?: ModuleRef,
+    /**
+     * @description 直接注入的默认 MikroORM 实例（优先使用，用于无上下文名称的场景）
+     */
+    @Optional()
+    @Inject(MikroORM)
+    private readonly injectedOrm?: MikroORM,
   ) {}
 
   /**
@@ -35,6 +46,19 @@ export class MikroOrmMiddleware implements NestMiddleware {
   private resolveOrm(): MikroORM {
     if (this.orm) {
       return this.orm;
+    }
+
+    // 优先使用直接注入的 ORM 实例
+    if (this.injectedOrm) {
+      this.orm = this.injectedOrm;
+      return this.orm;
+    }
+
+    // 回退到通过 ModuleRef 解析
+    if (!this.moduleRef) {
+      throw new Error(
+        "ModuleRef 未注入且未直接注入 MikroORM 实例，无法解析。请确保 MikroOrmMiddleware 在正确的模块上下文中使用。",
+      );
     }
 
     const token = this.options?.contextName

@@ -8,6 +8,7 @@ import {
 import {
   Global,
   Inject,
+  Optional,
   Module,
   RequestMethod,
   type DynamicModule,
@@ -63,7 +64,7 @@ export class MikroOrmCoreModule implements NestModule, OnApplicationShutdown {
   constructor(
     @Inject(MIKRO_ORM_MODULE_OPTIONS)
     private readonly options: typings.MikroOrmModuleOptions,
-    private readonly moduleRef: ModuleRef,
+    @Optional() private readonly moduleRef?: ModuleRef,
   ) {}
 
   /**
@@ -361,6 +362,10 @@ export class MikroOrmCoreModule implements NestModule, OnApplicationShutdown {
    * @returns Promise<void>
    */
   async onApplicationShutdown() {
+    if (!this.moduleRef) {
+      return;
+    }
+
     const token = this.options.contextName
       ? getMikroORMToken(this.options.contextName)
       : MikroORM;
@@ -384,8 +389,16 @@ export class MikroOrmCoreModule implements NestModule, OnApplicationShutdown {
       return;
     }
 
+    // 使用工厂函数注入 ModuleRef 和 MikroORM 实例，确保中间件可以正确解析
+    const token = this.options.contextName
+      ? getMikroORMToken(this.options.contextName)
+      : MikroORM;
+
     consumer
-      .apply(MikroOrmMiddleware) // 自动注册请求上下文中间件
+      .apply((moduleRef: ModuleRef, orm: MikroORM) => {
+        const middleware = new MikroOrmMiddleware(this.options, moduleRef, orm);
+        return middleware.use.bind(middleware);
+      })
       .forRoutes({
         path: forRoutesPath(this.options, consumer),
         method: RequestMethod.ALL,

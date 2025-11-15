@@ -29,7 +29,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && echo '{\"type\":\"module\"}' > dist/package.json",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
     "dev": "tsc -p tsconfig.build.json --watch",
     "lint": "eslint . --fix",
